@@ -5,14 +5,15 @@ using UnityEngine;
 public class BoardManager : MonoBehaviour
 {
 
-	public GameObject tilePrefab; //TODO: test making private and add [SerializeField] instead
+	[SerializeField] private GameObject tilePrefab;
+	[SerializeField] private GameObject highlightTilePrefab;
 	private Dictionary<Vector2Int, GameObject> placedTiles = new Dictionary<Vector2Int, GameObject>();
 	// Start is called before the first frame update
 	void Start()
     {
 		Vector2Int centerPos = Vector2Int.zero;
 		PlaceTile(centerPos, true);
-		//HighlightAvailablePositions();
+		HighlightAvailablePositions();
 	}
 	void PlaceTile(Vector2Int position, bool isStarter = false)
 	{
@@ -43,7 +44,7 @@ public class BoardManager : MonoBehaviour
 		{
 			Debug.LogError("No sprites found in Resources/Sprites");
 		}
-		return tileSprites[Random.Range(0, tileSprites.Length)];
+		return tileSprites.Length > 0 ? tileSprites[Random.Range(0, tileSprites.Length)] : null;
 	}
 
 	void HighlightAvailablePositions()
@@ -54,10 +55,10 @@ public class BoardManager : MonoBehaviour
 		foreach (Vector2Int pos in placedTiles.Keys)
 		{
 			Vector2Int[] neighbors = {
-			pos + Vector2Int.up,
-			pos + Vector2Int.down,
-			pos + Vector2Int.left,
-			pos + Vector2Int.right
+			pos + Vector2Int.up * 8,
+			pos + Vector2Int.down * 8,
+			pos + Vector2Int.left * 8,
+			pos + Vector2Int.right * 8
 		};
 
 			foreach (Vector2Int neighbor in neighbors)
@@ -72,28 +73,37 @@ public class BoardManager : MonoBehaviour
 		foreach (Vector2Int pos in availablePositions)
 		{
 			Debug.Log("Highlighting position: " + pos);
-			GameObject highlightTile = Instantiate(tilePrefab, new Vector3(pos.x, pos.y, 0), Quaternion.identity);
+			GameObject highlightTile = Instantiate(highlightTilePrefab, new Vector3(pos.x, pos.y, 0), Quaternion.identity);
 			SpriteRenderer sr = highlightTile.GetComponent<SpriteRenderer>();
-			sr.color = new Color(1, 1, 1, 0.5f);
+			if (sr.sprite == null)
+			{
+				Debug.LogError("Failed to assign sprite to tile at position: " + pos);
+			}
+			else
+			{
+				Debug.Log("Assigned sprite to tile at position: " + pos);
+			}
 
-			highlightTile.AddComponent<BoxCollider2D>();
-			HighlightTile ht = highlightTile.AddComponent<HighlightTile>();
-			ht.boardManager = this;
-
-			// Assign a tag to the highlight tile
-			highlightTile.tag = "Highlight";
+			HighlightTile ht = highlightTile.GetComponent<HighlightTile>();
+			if (ht != null)
+			{
+				ht.boardManager = this;
+			}
+			else
+			{
+				Debug.LogError("HighlightTile script not found on HighlightTilePrefab.");
+			}
 		}
+
 	}
 
-	public void OnTileSelected(Vector2Int position)
+	public void OnTileSelected(Vector2Int position, GameObject highlightTile)
 	{
-		// Place the tile
+		Debug.Log("Tile selected at position: " + position);
+		// Destroy the highlight tile
+		Destroy(highlightTile);
+		// Place a regular tile at the selected position
 		PlaceTile(position);
-		// Remove highlights
-		foreach (GameObject highlight in GameObject.FindGameObjectsWithTag("Highlight"))
-		{
-			Destroy(highlight);
-		}
 		// Update highlights
 		HighlightAvailablePositions();
 	}
