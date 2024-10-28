@@ -1,0 +1,18 @@
+.root {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 120px;
+    height: 120px;
+    padding: 10px;
+}
+
+.preview-image {
+    width: 100px;
+    height: 100px;
+    background-color: #ffffff; /* White background */
+    border-color: #000000; /* Black border */
+    border-radius: 5px;
+    -unity-text-align: middle-center;
+    /* Additional styling as needed */
+}
