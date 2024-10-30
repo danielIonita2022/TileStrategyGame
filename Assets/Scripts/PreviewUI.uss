@@ -16,3 +16,21 @@
     -unity-text-align: middle-center;
     /* Additional styling as needed */
 }
+
+.rotation-buttons {
+    flex-direction: row;
+    margin-bottom: 10px;
+}
+
+.rotate-button {
+    width: 120px;
+    height: 40px;
+    background-color: #777777;
+    border-radius: 5px;
+    justify-content: center;
+    align-items: center;
+}
+
+.rotate-button:hover {
+    background-color: #999999;
+}

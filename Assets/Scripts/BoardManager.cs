@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class BoardManager : MonoBehaviour
 {
@@ -90,6 +91,9 @@ public class BoardManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Places a tile at the specified position. If isStarter is true, uses starterTileData.
+    /// </summary>
     void PlaceTile(Vector2Int position, GameObject highlightTile = null, bool isStarter = false)
     {
         if (currentTileCount >= maxTiles)
@@ -129,6 +133,10 @@ public class BoardManager : MonoBehaviour
                 Destroy(newTileObj);
                 return;
             }
+            newTile.AssignFeatures();
+
+            int rotationState = previewUIController.GetPreviewRotationState();
+            newTile.RotateTile(rotationState);
 
             // Check compatibility with adjacent tiles
             Vector2Int[] directions = {
@@ -139,10 +147,10 @@ public class BoardManager : MonoBehaviour
             };
 
             FeatureType[] newTileEdges = {
-                newTile.tileData.northEdge,
-                newTile.tileData.eastEdge,
-                newTile.tileData.southEdge,
-                newTile.tileData.westEdge
+                newTile.CurrentNorthEdge,
+                newTile.CurrentEastEdge,
+                newTile.CurrentSouthEdge,
+                newTile.CurrentWestEdge
             };
 
             FeatureType newTileCenter = newTile.tileData.centerFeature;
@@ -162,9 +170,9 @@ public class BoardManager : MonoBehaviour
 
                     // Determine corresponding edge index
                     int oppositeEdgeIndex = (i + 2) % 4; // Opposite direction
-                    FeatureType existingEdge = GetFeature(adjacentTile.tileData, oppositeEdgeIndex);
+                    FeatureType existingEdge = GetFeature(adjacentTile, oppositeEdgeIndex);
                     FeatureType newEdge = newTileEdges[i];
-                    FeatureType existingCenter = adjacentTile.tileData.centerFeature;
+                    FeatureType existingCenter = adjacentTile.CurrentCenterFeature;
 
                     if (!AreFeaturesCompatible(existingEdge, newEdge, newTileCenter, existingCenter))
                     {
@@ -195,6 +203,7 @@ public class BoardManager : MonoBehaviour
             Debug.Log("Placing starter tile.");
         }
 
+        previewUIController.ResetPreviewRotationState();
         placedTiles.Add(position, newTileObj);
         currentTileCount++;
         Debug.Log($"Tile placed at {position}. Current tile count: {currentTileCount}");
@@ -217,26 +226,32 @@ public class BoardManager : MonoBehaviour
         // You can also disable input or other relevant components
     }
 
-    FeatureType GetFeature(TileData tileData, int edgeIndex)
+    /// <summary>
+    /// Retrieves the feature type for a specific edge index of a tile.
+    /// </summary>
+    FeatureType GetFeature(Tile tile, int edgeIndex)
     {
         // edgeIndex: 0 = North, 1 = East, 2 = South, 3 = West, 4 = Center
         switch (edgeIndex)
         {
             case 0:
-                return tileData.northEdge;
+                return tile.CurrentNorthEdge;
             case 1:
-                return tileData.eastEdge;
+                return tile.CurrentEastEdge;
             case 2:
-                return tileData.southEdge;
+                return tile.CurrentSouthEdge;
             case 3:
-                return tileData.westEdge;
+                return tile.CurrentWestEdge;
             case 4:
-                return tileData.centerFeature;
+                return tile.CurrentCenterFeature;
             default:
                 return FeatureType.NONE;
         }
     }
 
+    /// <summary>
+    /// Checks if two features are compatible based on game rules.
+    /// </summary>
     bool AreFeaturesCompatible(FeatureType existingEdge, FeatureType newEdge, FeatureType newCenter, FeatureType existingCenter)
     {
         if (existingEdge == FeatureType.NONE || newEdge == FeatureType.NONE)
@@ -314,6 +329,9 @@ public class BoardManager : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Highlights all valid positions where tiles can be placed.
+    /// </summary>
     void HighlightAvailablePositions()
     {
         Debug.Log("Highlighting available positions");
@@ -370,64 +388,12 @@ public class BoardManager : MonoBehaviour
 
     }
 
-    bool CanPlaceTileAtPosition(Vector2Int position)
-    {
-        // Retrieve adjacent positions and ensure compatibility
-        Vector2Int[] directions = {
-            Vector2Int.up * 8,
-            Vector2Int.right * 8,
-            Vector2Int.down * 8,
-            Vector2Int.left * 8
-        };
-
-        // Iterate through all directions to check compatibility
-        for (int i = 0; i < directions.Length; i++)
-        {
-            Vector2Int adjacentPos = position + directions[i];
-            if (placedTiles.ContainsKey(adjacentPos))
-            {
-                GameObject adjacentTileObj = placedTiles[adjacentPos];
-                Tile adjacentTile = adjacentTileObj.GetComponent<Tile>();
-                if (adjacentTile == null)
-                {
-                    Debug.LogError($"Tile component not found on adjacent tile at {adjacentPos}.");
-                    continue;
-                }
-
-                // Determine corresponding edge feature
-                FeatureType existingEdge = GetFeature(adjacentTile.tileData, (i + 2) % 4);
-                // Simulate compatibility with all possible TileData
-                bool compatible = false;
-                foreach (TileData potentialTile in tileDeck)
-                {
-                    FeatureType newEdge = GetFeature(potentialTile, i);
-                    FeatureType newTileCenter = potentialTile.centerFeature;
-                    FeatureType existingCenter = adjacentTile.tileData.centerFeature;
-
-                    if (AreFeaturesCompatible(existingEdge, newEdge, newTileCenter, existingCenter))
-                    {
-                        compatible = true;
-                        break;
-                    }
-                }
-
-                if (!compatible)
-                {
-                    // No compatible tile can be placed here
-                    return false;
-                }
-            }
-        }
-
-        return true; // All adjacent edges are compatible
-    }
-
+    /// <summary>
+    /// Called when a highlight tile is selected (clicked).
+    /// </summary>
     public void OnTileSelected(Vector2Int position, GameObject highlightTile)
     {
         Debug.Log($"Tile selected at position: {position}");
-        // Destroy the highlight tile
-        // Place a regular tile at the selected position
         PlaceTile(position, highlightTile);
-        // No need to call HighlightAvailablePositions here as PlaceTile already does it
     }
 }
