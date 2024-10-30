@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:engine="UnityEngine.UIElements"
+    xmlns:editor="UnityEditor.UIElements"
+    xsi:noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd"
+>
+    <Style src="project://database/Assets/Scripts/PreviewUI.uss?fileID=7433441132597879392&amp;guid=5081b3964464e01439f1cc909b838a32&amp;type=3#PreviewUI" />
+	<engine:VisualElement class="preview-container">
+        
+        <!-- Preview Image -->
+        <engine:Image name="PreviewImage" class="preview-image" />
+        
+        <!-- Rotation Buttons Container -->
+        <engine:VisualElement class="rotation-buttons">
+            
+            <!-- Rotate Left Button -->
+            <engine:Button name="RotateLeftButton" class="rotate-button">
+                <engine:Label text="Rotate Left" />
+            </engine:Button>
+            
+            <!-- Rotate Right Button -->
+            <engine:Button name="RotateRightButton" class="rotate-button">
+                <engine:Label text="Rotate Right" />
+            </engine:Button>
+        
+        </engine:VisualElement>
+    
+    </engine:VisualElement>
+
+</engine:UXML>

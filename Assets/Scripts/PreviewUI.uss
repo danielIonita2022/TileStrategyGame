@@ -1,0 +1,36 @@
+.root {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 120px;
+    height: 120px;
+    padding: 10px;
+}
+
+.preview-image {
+    width: 100px;
+    height: 100px;
+    background-color: #ffffff; /* White background */
+    border-color: #000000; /* Black border */
+    border-radius: 5px;
+    -unity-text-align: middle-center;
+    /* Additional styling as needed */
+}
+
+.rotation-buttons {
+    flex-direction: row;
+    margin-bottom: 10px;
+}
+
+.rotate-button {
+    width: 120px;
+    height: 40px;
+    background-color: #777777;
+    border-radius: 5px;
+    justify-content: center;
+    align-items: center;
+}
+
+.rotate-button:hover {
+    background-color: #999999;
+}

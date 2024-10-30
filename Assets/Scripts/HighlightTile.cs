@@ -2,17 +2,23 @@ using UnityEngine;
 
 public class HighlightTile : MonoBehaviour
 {
-	public BoardManager boardManager;
-	private Vector2Int position;
+    [HideInInspector]
+    public BoardManager boardManager; // Reference to the BoardManager
 
-	void Start()
-	{
-		position = new Vector2Int((int)transform.position.x, (int)transform.position.y);
-		gameObject.tag = "Highlight";
-	}
+    [HideInInspector]
+    public Vector2Int tilePosition; // Position this highlight tile represents
 
-	void OnMouseDown()
+    void OnMouseDown()
 	{
-		boardManager.OnTileSelected(position);
+		if (boardManager != null)
+		{
+			Vector2Int position = new Vector2Int(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.y));
+			boardManager.OnTileSelected(position, this.gameObject);
+			Debug.Log("Highlight tile at position " + position + " clicked.");
+		}
+		else
+		{
+			Debug.LogError("BoardManager reference not set on HighlightTile.");
+		}
 	}
 }
