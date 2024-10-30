@@ -154,6 +154,7 @@ MonoBehaviour:
   tilePrefab: {fileID: 1947241062}
   highlightTilePrefab: {fileID: 416770728}
   previewUIController: {fileID: 1295139413}
+  starterTileData: {fileID: 0}
 --- !u!4 &223136766
 Transform:
   m_ObjectHideFlags: 0
@@ -378,11 +379,15 @@ PrefabInstance:
     - target: {fileID: 4693249737119190383, guid: f506157e4353c4c4ebc0a845f699f6b7, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 21300000, guid: ee3ad3850b8022f40b26892ac1ed8319, type: 3}
+      objectReference: {fileID: 0}
     - target: {fileID: 4693249737119190383, guid: f506157e4353c4c4ebc0a845f699f6b7, type: 3}
       propertyPath: m_WasSpriteAssigned
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5791058682190043862, guid: f506157e4353c4c4ebc0a845f699f6b7, type: 3}
+      propertyPath: tileData
+      value: 
+      objectReference: {fileID: 11400000, guid: af2b27e9b1d628242ad78ba1b3965b83, type: 2}
     - target: {fileID: 6554407682531403197, guid: f506157e4353c4c4ebc0a845f699f6b7, type: 3}
       propertyPath: m_LocalPosition.x
       value: 440.97202

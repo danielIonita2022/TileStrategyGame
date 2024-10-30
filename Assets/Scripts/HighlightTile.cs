@@ -2,10 +2,13 @@ using UnityEngine;
 
 public class HighlightTile : MonoBehaviour
 {
-	[HideInInspector]
-	public BoardManager boardManager; // Reference to the BoardManager
+    [HideInInspector]
+    public BoardManager boardManager; // Reference to the BoardManager
 
-	void OnMouseDown()
+    [HideInInspector]
+    public Vector2Int tilePosition; // Position this highlight tile represents
+
+    void OnMouseDown()
 	{
 		if (boardManager != null)
 		{
