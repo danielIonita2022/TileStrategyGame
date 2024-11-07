@@ -27,7 +27,7 @@ public class BoardManager : MonoBehaviour
         LoadTileDeck();
         ShuffleTileDeck();
         currentHighlightPositions = new HashSet<Vector2Int>();
-        DrawNextTile();
+        DrawNextTile(true);
         Vector2Int centerPos = Vector2Int.zero;
         PlaceTile(centerPos, null, true);
     }
@@ -67,14 +67,14 @@ public class BoardManager : MonoBehaviour
         Debug.Log("Shuffled the tile deck.");
     }
 
-    private void DrawNextTile()
+    private void DrawNextTile(bool isStarter = false)
     {
         int attempts = 0;
         int maxAttempts = tileDeck.Count;
         while (tileDeck.Count > 0 && attempts < maxAttempts)
         {
             TileData candidateTile = tileDeck[0];
-            if (CanTileBePlaced(candidateTile))
+            if (isStarter || CanTileBePlaced(candidateTile))
             {
                 currentPreviewTileData = candidateTile;
                 tileDeck.RemoveAt(0);
