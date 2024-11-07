@@ -371,6 +371,7 @@ public class BoardManager : MonoBehaviour
         if (previewUIController != null)
         {
             previewUIController.HidePreview();
+            previewUIController.DisableRotation();
         }
         // Optionally, display a "Game Over" message or UI
         // You can also disable input or other relevant components

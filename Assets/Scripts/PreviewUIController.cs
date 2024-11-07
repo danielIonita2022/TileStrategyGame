@@ -12,7 +12,7 @@ public class PreviewUIController : MonoBehaviour
     private int previewRotationState = 0; // 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°
     private float[] rotationAngles = { 0f, 90f, 180f, 270f };
 
-    void OnEnable()
+    private void OnEnable()
 	{
         uiDocument = GetComponent<UIDocument>();
 		if (uiDocument == null)
@@ -40,7 +40,7 @@ public class PreviewUIController : MonoBehaviour
             Debug.LogError("RotateRightButton not found in UXML.");
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
         // Unsubscribe to prevent memory leaks
         if (rotateLeftButton != null)
@@ -126,5 +126,31 @@ public class PreviewUIController : MonoBehaviour
     public void ResetPreviewRotationState()
     {
         previewRotationState = 0;
+    }
+
+    /// <summary>
+    /// Disables rotation controls when no tiles can be placed.
+    /// </summary>
+    public void DisableRotation()
+    {
+        if (rotateLeftButton != null)
+            rotateLeftButton.SetEnabled(false);
+        if (rotateRightButton != null)
+            rotateRightButton.SetEnabled(false);
+
+        Debug.Log("Rotation controls disabled.");
+    }
+
+    /// <summary>
+    /// Enables rotation controls when tile placements are available.
+    /// </summary>
+    public void EnableRotation()
+    {
+        if (rotateLeftButton != null)
+            rotateLeftButton.SetEnabled(true);
+        if (rotateRightButton != null)
+            rotateRightButton.SetEnabled(true);
+
+        Debug.Log("Rotation controls enabled.");
     }
 }
