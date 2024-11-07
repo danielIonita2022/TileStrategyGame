@@ -25,8 +25,7 @@ public class Tile : MonoBehaviour
     public FeatureType CurrentWestEdge { get; set; }
     public FeatureType CurrentCenterFeature { get; set; }
 
-
-    void Awake()
+    private void Awake()
     {
         if (tileData != null)
         {
@@ -45,7 +44,7 @@ public class Tile : MonoBehaviour
         }
     }
 
-    void Start()
+    private void Start()
     {
         if (tileData != null)
         {
@@ -70,6 +69,7 @@ public class Tile : MonoBehaviour
             CurrentCenterFeature = tileData.centerFeature;
         }
     }
+
     //void Start()
     //{
     //    if (tileData != null && tileData.tileSprite != null)
@@ -94,7 +94,7 @@ public class Tile : MonoBehaviour
     //    }
     //}
 
-    void HandleSpecialFeatures()
+    private void HandleSpecialFeatures()
     {
         if (CurrentCenterFeature.HasFlag(FeatureType.SHIELD))
         {

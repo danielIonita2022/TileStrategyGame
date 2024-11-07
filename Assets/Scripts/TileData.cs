@@ -14,7 +14,6 @@ public class TileData : ScriptableObject
     public FeatureType southEdge;
     public FeatureType westEdge;
 
-    // Optional: Reference to a sprite for visualization
     public Sprite tileSprite;
 
     public int count;

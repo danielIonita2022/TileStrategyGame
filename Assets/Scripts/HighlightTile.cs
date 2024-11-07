@@ -8,7 +8,7 @@ public class HighlightTile : MonoBehaviour
     [HideInInspector]
     public Vector2Int tilePosition; // Position this highlight tile represents
 
-    void OnMouseDown()
+    private void OnMouseDown()
 	{
 		if (boardManager != null)
 		{

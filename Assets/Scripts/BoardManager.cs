@@ -2,6 +2,7 @@ using Assets.Scripts;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TreeEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -21,7 +22,7 @@ public class BoardManager : MonoBehaviour
     private int maxTiles = 50;
     private int currentTileCount = 0;
 
-    void Start()
+    private void Start()
     {
         LoadTileDeck();
         ShuffleTileDeck();
@@ -31,7 +32,7 @@ public class BoardManager : MonoBehaviour
         PlaceTile(centerPos, null, true);
     }
 
-    void LoadTileDeck()
+    private void LoadTileDeck()
     {
         tileDeck.Clear();
 
@@ -54,7 +55,7 @@ public class BoardManager : MonoBehaviour
         Debug.Log($"Loaded {tileDeck.Count} TileData assets into the deck.");
     }
 
-    void ShuffleTileDeck()
+    private void ShuffleTileDeck()
     {
         for (int i = tileDeck.Count - 1; i > 0; i--)
         {
@@ -66,15 +67,28 @@ public class BoardManager : MonoBehaviour
         Debug.Log("Shuffled the tile deck.");
     }
 
-    void DrawNextTile()
+    private void DrawNextTile()
     {
-        if (tileDeck.Count > 0)
+        int attempts = 0;
+        int maxAttempts = tileDeck.Count;
+        while (tileDeck.Count > 0 && attempts < maxAttempts)
         {
-            currentPreviewTileData = tileDeck[0];
-            tileDeck.RemoveAt(0);
-            UpdatePreviewImage();
+            TileData candidateTile = tileDeck[0];
+            if (CanTileBePlaced(candidateTile))
+            {
+                currentPreviewTileData = candidateTile;
+                tileDeck.RemoveAt(0);
+                UpdatePreviewImage();
+                return;
+            }
+            else
+            {
+                tileDeck.RemoveAt(0);
+                tileDeck.Add(candidateTile);
+                attempts++;
+            }
         }
-        else
+        if (attempts >= maxAttempts)
         {
             currentPreviewTileData = null;
             if (previewUIController != null)
@@ -86,7 +100,135 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    void UpdatePreviewImage()
+    private bool CanTileBePlaced(TileData candidateTileData)
+    {
+        if (candidateTileData != null)
+        {
+            List<Vector2Int> availablePositions = GetAvailablePositions();
+            foreach (Vector2Int pos in availablePositions)
+            {
+                for (int rotationState = 0; rotationState < 4; rotationState++)
+                {
+                    List<FeatureType> rotatedEdges = GetRotatedEdges(candidateTileData, rotationState);
+                    FeatureType rotatedNorth = rotatedEdges[0];
+                    FeatureType rotatedEast = rotatedEdges[1];
+                    FeatureType rotatedSouth = rotatedEdges[2];
+                    FeatureType rotatedWest = rotatedEdges[3];
+
+                    bool isCompatible = true;
+                    Vector2Int[] directions = {
+                        Vector2Int.up * 8,
+                        Vector2Int.right * 8,
+                        Vector2Int.down * 8,
+                        Vector2Int.left * 8
+                    };
+
+                    FeatureType[] tileEdges = {
+                        rotatedNorth,
+                        rotatedEast,
+                        rotatedSouth,
+                        rotatedWest
+                    };
+                    for (int i = 0; i < directions.Length; i++)
+                    {
+                        Vector2Int adjacentPos = pos + directions[i];
+                        if (placedTiles.ContainsKey(adjacentPos))
+                        {
+                            Tile adjacentTile = placedTiles[adjacentPos].GetComponent<Tile>();
+                            if (adjacentTile == null || adjacentTile.tileData == null)
+                            {
+                                // Invalid adjacent tile, skip
+                                continue;
+                            }
+
+                            // Determine corresponding edge index
+                            int oppositeEdgeIndex = (i + 2) % 4; // Opposite direction
+
+                            // Get the adjacent tile's edge
+                            FeatureType adjacentEdge = GetFeature(adjacentTile, oppositeEdgeIndex);
+
+                            // Get current tile's edge
+                            FeatureType currentEdge = tileEdges[i];
+
+                            // Check compatibility
+                            if (!AreFeaturesCompatible(adjacentEdge, currentEdge, candidateTileData.centerFeature, adjacentTile.tileData.centerFeature))
+                            {
+                                isCompatible = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isCompatible)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Simulates rotation by returning the edges after rotation.
+    /// </summary>
+    /// <param name="tileData">Original TileData.</param>
+    /// <param name="rotationState">Number of 90° rotations.</param>
+    /// <returns>List of FeatureType representing [north, east, south, west] after rotation.</returns>
+    private List<FeatureType> GetRotatedEdges(TileData tileData, int rotationState)
+    {
+        // Clone the edge features
+        FeatureType[] edges = new FeatureType[] {
+            tileData.northEdge,
+            tileData.eastEdge,
+            tileData.southEdge,
+            tileData.westEdge
+        };
+
+        // Apply rotationState times 90 degrees clockwise rotation
+        for (int i = 0; i < rotationState; i++)
+        {
+            FeatureType temp = edges[3]; // westEdge
+            edges[3] = edges[2]; // southEdge
+            edges[2] = edges[1]; // eastEdge
+            edges[1] = edges[0]; // northEdge
+            edges[0] = temp; // westEdge
+        }
+
+        return new List<FeatureType>(edges);
+    }
+
+    /// <summary>
+    /// Retrieves all available positions where tiles can be placed.
+    /// </summary>
+    /// <returns>List of Vector2Int positions.</returns>
+    private List<Vector2Int> GetAvailablePositions()
+    {
+        HashSet<Vector2Int> availablePositions = new HashSet<Vector2Int>();
+
+        foreach (Vector2Int pos in placedTiles.Keys)
+        {
+            Vector2Int[] neighbors = {
+                pos + Vector2Int.up * 8,
+                pos + Vector2Int.down * 8,
+                pos + Vector2Int.left * 8,
+                pos + Vector2Int.right * 8
+            };
+
+            foreach (Vector2Int neighbor in neighbors)
+            {
+                if (!placedTiles.ContainsKey(neighbor))
+                {
+                    availablePositions.Add(neighbor);
+                }
+            }
+        }
+
+        return new List<Vector2Int>(availablePositions);
+    }
+
+    private void UpdatePreviewImage()
     {
         if (currentPreviewTileData != null && previewUIController != null)
         {
@@ -102,7 +244,7 @@ public class BoardManager : MonoBehaviour
     /// <summary>
     /// Places a tile at the specified position. If isStarter is true, uses starterTileData.
     /// </summary>
-    void PlaceTile(Vector2Int position, GameObject highlightTile = null, bool isStarter = false)
+    private void PlaceTile(Vector2Int position, GameObject highlightTile = null, bool isStarter = false)
     {
         if (currentTileCount >= maxTiles)
         {
@@ -222,7 +364,7 @@ public class BoardManager : MonoBehaviour
         HighlightAvailablePositions();
     }
 
-    void DisableFurtherPlacement()
+    private void DisableFurtherPlacement()
     {
         Debug.Log("Disabling further tile placements.");
         // Hide or disable the preview image
@@ -237,7 +379,7 @@ public class BoardManager : MonoBehaviour
     /// <summary>
     /// Retrieves the feature type for a specific edge index of a tile.
     /// </summary>
-    FeatureType GetFeature(Tile tile, int edgeIndex)
+    private FeatureType GetFeature(Tile tile, int edgeIndex)
     {
         // edgeIndex: 0 = North, 1 = East, 2 = South, 3 = West, 4 = Center
         switch (edgeIndex)
@@ -260,7 +402,7 @@ public class BoardManager : MonoBehaviour
     /// <summary>
     /// Checks if two features are compatible based on game rules.
     /// </summary>
-    bool AreFeaturesCompatible(FeatureType existingEdge, FeatureType newEdge, FeatureType newCenter, FeatureType existingCenter)
+    private bool AreFeaturesCompatible(FeatureType existingEdge, FeatureType newEdge, FeatureType newCenter, FeatureType existingCenter)
     {
         if (existingEdge == FeatureType.NONE || newEdge == FeatureType.NONE)
             return false;
@@ -340,7 +482,7 @@ public class BoardManager : MonoBehaviour
     /// <summary>
     /// Highlights all valid positions where tiles can be placed.
     /// </summary>
-    void HighlightAvailablePositions()
+    private void HighlightAvailablePositions()
     {
         Debug.Log("Highlighting available positions");
 
