@@ -1,3 +1,4 @@
+using Assets.Scripts;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ public class BoardManager : MonoBehaviour
     [SerializeField] private GameObject highlightTilePrefab;
     [SerializeField] private PreviewUIController previewUIController;
     [SerializeField] private TileData starterTileData;
+    [SerializeField] private List<TileCount> tileCounts = new List<TileCount>();
 
     private List<TileData> tileDeck = new List<TileData>();
     private TileData currentPreviewTileData;
@@ -31,19 +33,25 @@ public class BoardManager : MonoBehaviour
 
     void LoadTileDeck()
     {
-        TileData[] loadedTiles = Resources.LoadAll<TileData>("Sprites/Tiles");
-        tileDeck = new List<TileData>(loadedTiles);
+        tileDeck.Clear();
+
+        foreach (TileCount tileCount in tileCounts)
+        {
+            if (tileCount.tileData == null)
+            {
+                Debug.LogWarning("A TileCount entry has a null TileData reference and will be skipped.");
+                continue;
+            }
+
+            for (int i = 0; i < tileCount.count; i++)
+            {
+                TileData tileDataCopy = Instantiate(tileCount.tileData); // Create a unique copy
+                tileDeck.Add(tileDataCopy);
+                Debug.Log($"Added copy {i + 1} of TileData: {tileDataCopy.name}");
+            }
+        }
+
         Debug.Log($"Loaded {tileDeck.Count} TileData assets into the deck.");
-
-        foreach (var tile in tileDeck)
-        {
-            Debug.Log($"Loaded TileData: {tile.name}");
-        }
-
-        if (tileDeck.Count == 0)
-        {
-            Debug.LogError("No TileData assets found in Resources/Tiles");
-        }
     }
 
     void ShuffleTileDeck()

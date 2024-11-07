@@ -16,4 +16,6 @@ public class TileData : ScriptableObject
 
     // Optional: Reference to a sprite for visualization
     public Sprite tileSprite;
+
+    public int count;
 }

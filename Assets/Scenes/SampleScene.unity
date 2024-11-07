@@ -155,6 +155,55 @@ MonoBehaviour:
   highlightTilePrefab: {fileID: 416770728}
   previewUIController: {fileID: 1295139413}
   starterTileData: {fileID: 0}
+  tileCounts:
+  - tileData: {fileID: 11400000, guid: 393242373e8566342abedb786a27e04a, type: 2}
+    count: 1
+  - tileData: {fileID: 11400000, guid: 5223044e6299d8043acd287a754e56ba, type: 2}
+    count: 3
+  - tileData: {fileID: 11400000, guid: 982e87969224d1f4081f8555e033a056, type: 2}
+    count: 1
+  - tileData: {fileID: 11400000, guid: 4e0c3cfe344f4314ea900f5289af152f, type: 2}
+    count: 3
+  - tileData: {fileID: 11400000, guid: a64bc05accbaa8c46905410b0f4783e7, type: 2}
+    count: 2
+  - tileData: {fileID: 11400000, guid: ba495d5e71da2204d84afad629fd3e6d, type: 2}
+    count: 2
+  - tileData: {fileID: 11400000, guid: 0f9b7310ecb802247ba48082a2ac5ab1, type: 2}
+    count: 1
+  - tileData: {fileID: 11400000, guid: 6eaf00efbb6f0e945a673cd154bceff6, type: 2}
+    count: 2
+  - tileData: {fileID: 11400000, guid: b0c0c1892fc993e4593eb26477e79cbf, type: 2}
+    count: 3
+  - tileData: {fileID: 11400000, guid: 1ae94c923788aa34183bc681454e97ea, type: 2}
+    count: 2
+  - tileData: {fileID: 11400000, guid: 11b7196f06685d840a09251b19a0ae73, type: 2}
+    count: 3
+  - tileData: {fileID: 11400000, guid: c321341689301084ca6306a8f7e6e86e, type: 2}
+    count: 5
+  - tileData: {fileID: 11400000, guid: 6771f9d14f1ae6f4e855a88ba06e2bc0, type: 2}
+    count: 3
+  - tileData: {fileID: 11400000, guid: af2b27e9b1d628242ad78ba1b3965b83, type: 2}
+    count: 4
+  - tileData: {fileID: 11400000, guid: 4828aa64d17442f4fbf897995b30f2fe, type: 2}
+    count: 3
+  - tileData: {fileID: 11400000, guid: 8f17cf872ba0022449be4dd6d9a86414, type: 2}
+    count: 3
+  - tileData: {fileID: 11400000, guid: 701cd727b19749b4ea96e0dd627657a2, type: 2}
+    count: 1
+  - tileData: {fileID: 11400000, guid: 41c5c22f98cc65a43a7c65f5afddd8c7, type: 2}
+    count: 2
+  - tileData: {fileID: 11400000, guid: 25e211b58c2014a4fa75616c5d552097, type: 2}
+    count: 4
+  - tileData: {fileID: 11400000, guid: 26768943e15918d4ca8ae26349f533a0, type: 2}
+    count: 2
+  - tileData: {fileID: 11400000, guid: bf96f0dc7494ac04a9d89d6f35568dc8, type: 2}
+    count: 9
+  - tileData: {fileID: 11400000, guid: 29e065e1cd734764485c75129bfbac3d, type: 2}
+    count: 8
+  - tileData: {fileID: 11400000, guid: 2c9b7db5e7539db47b1dad120b19ea04, type: 2}
+    count: 4
+  - tileData: {fileID: 11400000, guid: 2bdbc4ad42e69c44e9de0de9a1299ef3, type: 2}
+    count: 1
 --- !u!4 &223136766
 Transform:
   m_ObjectHideFlags: 0
