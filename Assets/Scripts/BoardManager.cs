@@ -145,7 +145,7 @@ public class BoardManager : MonoBehaviour
                             int oppositeEdgeIndex = (i + 2) % 4; // Opposite direction
 
                             // Get the adjacent tile's edge
-                            FeatureType adjacentEdge = GetFeature(adjacentTile, oppositeEdgeIndex);
+                            FeatureType adjacentEdge = adjacentTile.GetFeature(oppositeEdgeIndex);
 
                             // Get current tile's edge
                             FeatureType currentEdge = tileEdges[i];
@@ -320,7 +320,7 @@ public class BoardManager : MonoBehaviour
 
                     // Determine corresponding edge index
                     int oppositeEdgeIndex = (i + 2) % 4; // Opposite direction
-                    FeatureType existingEdge = GetFeature(adjacentTile, oppositeEdgeIndex);
+                    FeatureType existingEdge = adjacentTile.GetFeature(oppositeEdgeIndex);
                     FeatureType newEdge = newTileEdges[i];
                     FeatureType existingCenter = adjacentTile.CurrentCenterFeature;
 
@@ -375,29 +375,6 @@ public class BoardManager : MonoBehaviour
         }
         // Optionally, display a "Game Over" message or UI
         // You can also disable input or other relevant components
-    }
-
-    /// <summary>
-    /// Retrieves the feature type for a specific edge index of a tile.
-    /// </summary>
-    private FeatureType GetFeature(Tile tile, int edgeIndex)
-    {
-        // edgeIndex: 0 = North, 1 = East, 2 = South, 3 = West, 4 = Center
-        switch (edgeIndex)
-        {
-            case 0:
-                return tile.CurrentNorthEdge;
-            case 1:
-                return tile.CurrentEastEdge;
-            case 2:
-                return tile.CurrentSouthEdge;
-            case 3:
-                return tile.CurrentWestEdge;
-            case 4:
-                return tile.CurrentCenterFeature;
-            default:
-                return FeatureType.NONE;
-        }
     }
 
     /// <summary>

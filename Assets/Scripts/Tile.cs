@@ -53,7 +53,6 @@ public class Tile : MonoBehaviour
             {
                 sr.sprite = tileData.tileSprite;
             }
-            //ApplyRotation();
             HandleSpecialFeatures();
         }
     }
@@ -70,29 +69,28 @@ public class Tile : MonoBehaviour
         }
     }
 
-    //void Start()
-    //{
-    //    if (tileData != null && tileData.tileSprite != null)
-    //    {
-    //        originalNorthEdge = tileData.northEdge;
-    //        originalEastEdge = tileData.eastEdge;
-    //        originalSouthEdge = tileData.southEdge;
-    //        originalWestEdge = tileData.westEdge;
-
-    //        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-    //        if (sr != null)
-    //        {
-    //            sr.sprite = tileData.tileSprite;
-    //        }
-
-    //        // Handle special features
-    //        HandleSpecialFeatures();
-    //    }
-    //    else
-    //    {
-    //        Debug.LogWarning($"Tile at {gridPosition} has no TileData or sprite assigned.");
-    //    }
-    //}
+    /// <summary>
+    /// Retrieves the feature type for a specific edge index of a tile.
+    /// </summary>
+    public FeatureType GetFeature(int edgeIndex)
+    {
+        // edgeIndex: 0 = North, 1 = East, 2 = South, 3 = West, 4 = Center
+        switch (edgeIndex)
+        {
+            case 0:
+                return CurrentNorthEdge;
+            case 1:
+                return CurrentEastEdge;
+            case 2:
+                return CurrentSouthEdge;
+            case 3:
+                return CurrentWestEdge;
+            case 4:
+                return CurrentCenterFeature;
+            default:
+                return FeatureType.NONE;
+        }
+    }
 
     private void HandleSpecialFeatures()
     {
