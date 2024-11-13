@@ -6,522 +6,677 @@ using TreeEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class BoardManager : MonoBehaviour
+namespace Assets.Scripts
 {
-    [SerializeField] private GameObject tilePrefab;
-    [SerializeField] private GameObject highlightTilePrefab;
-    [SerializeField] private PreviewUIController previewUIController;
-    [SerializeField] private TileData starterTileData;
-    [SerializeField] private List<TileCount> tileCounts = new List<TileCount>();
-
-    private List<TileData> tileDeck = new List<TileData>();
-    private TileData currentPreviewTileData;
-
-    private Dictionary<Vector2Int, GameObject> placedTiles = new Dictionary<Vector2Int, GameObject>();
-    private HashSet<Vector2Int> currentHighlightPositions;
-    private int maxTiles = 50;
-    private int currentTileCount = 0;
-
-    private void Start()
+    public class BoardManager : MonoBehaviour
     {
-        LoadTileDeck();
-        ShuffleTileDeck();
-        currentHighlightPositions = new HashSet<Vector2Int>();
-        DrawNextTile(true);
-        Vector2Int centerPos = Vector2Int.zero;
-        PlaceTile(centerPos, null, true);
-    }
+        public static BoardManager Instance { get; private set; }
 
-    private void LoadTileDeck()
-    {
-        tileDeck.Clear();
+        [SerializeField] private GameObject tilePrefab;
+        [SerializeField] private GameObject highlightTilePrefab;
+        
+        [SerializeField] private TileData starterTileData;
+        [SerializeField] private List<TileCount> tileCounts = new List<TileCount>();
 
-        foreach (TileCount tileCount in tileCounts)
+        private List<TileData> tileDeck = new List<TileData>();
+        private TileData currentPreviewTileData;
+
+        private Dictionary<Vector2Int, GameObject> placedTiles = new Dictionary<Vector2Int, GameObject>();
+        private HashSet<Vector2Int> currentHighlightPositions;
+        private int maxTiles = 50;
+        private int currentTileCount = 0;
+
+        public event Action OnNoMoreTilePlacements;
+        public event Action<Sprite> OnPreviewImageUpdate;
+        public event Action<HighlightTile> OnHighlightTileCreated;
+
+        private void Awake()
         {
-            if (tileCount.tileData == null)
+            if (Instance == null)
             {
-                Debug.LogWarning("A TileCount entry has a null TileData reference and will be skipped.");
-                continue;
-            }
-
-            for (int i = 0; i < tileCount.count; i++)
-            {
-                TileData tileDataCopy = Instantiate(tileCount.tileData); // Create a unique copy
-                tileDeck.Add(tileDataCopy);
-                Debug.Log($"Added copy {i + 1} of TileData: {tileDataCopy.name}");
-            }
-        }
-
-        Debug.Log($"Loaded {tileDeck.Count} TileData assets into the deck.");
-    }
-
-    private void ShuffleTileDeck()
-    {
-        for (int i = tileDeck.Count - 1; i > 0; i--)
-        {
-            int j = UnityEngine.Random.Range(0, i + 1);
-            TileData temp = tileDeck[i];
-            tileDeck[i] = tileDeck[j];
-            tileDeck[j] = temp;
-        }
-        Debug.Log("Shuffled the tile deck.");
-    }
-
-    private void DrawNextTile(bool isStarter = false)
-    {
-        int attempts = 0;
-        int maxAttempts = tileDeck.Count;
-        while (tileDeck.Count > 0 && attempts < maxAttempts)
-        {
-            TileData candidateTile = tileDeck[0];
-            if (isStarter || CanTileBePlaced(candidateTile))
-            {
-                currentPreviewTileData = candidateTile;
-                tileDeck.RemoveAt(0);
-                UpdatePreviewImage();
-                return;
+                Instance = this;
             }
             else
             {
-                tileDeck.RemoveAt(0);
-                tileDeck.Add(candidateTile);
-                attempts++;
+                Destroy(gameObject);
+                return;
             }
         }
-        if (attempts >= maxAttempts)
-        {
-            currentPreviewTileData = null;
-            if (previewUIController != null)
-            {
-                previewUIController.HidePreview();
-            }
-            Debug.Log("No more tiles to draw.");
-            DisableFurtherPlacement();
-        }
-    }
 
-    private bool CanTileBePlaced(TileData candidateTileData)
-    {
-        if (candidateTileData != null)
+        private void Start()
         {
-            List<Vector2Int> availablePositions = GetAvailablePositions();
-            foreach (Vector2Int pos in availablePositions)
+            LoadTileDeck();
+            ShuffleTileDeck();
+            currentHighlightPositions = new HashSet<Vector2Int>();
+            DrawNextTile(true);
+            Vector2Int centerPos = Vector2Int.zero;
+            PlaceTile(centerPos, 0, null, true);
+        }
+
+        private void LoadTileDeck()
+        {
+            tileDeck.Clear();
+
+            foreach (TileCount tileCount in tileCounts)
             {
-                for (int rotationState = 0; rotationState < 4; rotationState++)
+                if (tileCount.tileData == null)
                 {
-                    List<FeatureType> rotatedEdges = GetRotatedEdges(candidateTileData, rotationState);
-                    FeatureType rotatedNorth = rotatedEdges[0];
-                    FeatureType rotatedEast = rotatedEdges[1];
-                    FeatureType rotatedSouth = rotatedEdges[2];
-                    FeatureType rotatedWest = rotatedEdges[3];
+                    Debug.LogWarning("A TileCount entry has a null TileData reference and will be skipped.");
+                    continue;
+                }
 
-                    bool isCompatible = true;
-                    Vector2Int[] directions = {
+                for (int i = 0; i < tileCount.count; i++)
+                {
+                    TileData tileDataCopy = Instantiate(tileCount.tileData); // Create a unique copy
+                    tileDeck.Add(tileDataCopy);
+                    Debug.Log($"Added copy {i + 1} of TileData: {tileDataCopy.name}");
+                }
+            }
+
+            Debug.Log($"Loaded {tileDeck.Count} TileData assets into the deck.");
+        }
+
+        private void ShuffleTileDeck()
+        {
+            for (int i = tileDeck.Count - 1; i > 0; i--)
+            {
+                int j = UnityEngine.Random.Range(0, i + 1);
+                TileData temp = tileDeck[i];
+                tileDeck[i] = tileDeck[j];
+                tileDeck[j] = temp;
+            }
+            Debug.Log("Shuffled the tile deck.");
+        }
+
+        private void DrawNextTile(bool isStarter = false)
+        {
+            int attempts = 0;
+            int maxAttempts = tileDeck.Count;
+            while (tileDeck.Count > 0 && attempts < maxAttempts)
+            {
+                TileData candidateTile = tileDeck[0];
+                if (isStarter || CanTileBePlaced(candidateTile))
+                {
+                    currentPreviewTileData = candidateTile;
+                    tileDeck.RemoveAt(0);
+                    if (currentPreviewTileData != null)
+                    {
+                        UpdatePreviewImage();
+                    }
+                    return;
+                }
+                else
+                {
+                    tileDeck.RemoveAt(0);
+                    tileDeck.Add(candidateTile);
+                    attempts++;
+                }
+            }
+            if (attempts >= maxAttempts)
+            {
+                currentPreviewTileData = null;
+                Debug.Log("No more tiles to draw.");
+                OnNoMoreTilePlacements?.Invoke();
+            }
+        }
+
+        private bool CanTileBePlaced(TileData candidateTileData)
+        {
+            if (candidateTileData != null)
+            {
+                List<Vector2Int> availablePositions = GetAvailablePositions();
+                foreach (Vector2Int pos in availablePositions)
+                {
+                    for (int rotationState = 0; rotationState < 4; rotationState++)
+                    {
+                        List<FeatureType> rotatedEdges = GetRotatedEdges(candidateTileData, rotationState);
+                        FeatureType rotatedNorth = rotatedEdges[0];
+                        FeatureType rotatedEast = rotatedEdges[1];
+                        FeatureType rotatedSouth = rotatedEdges[2];
+                        FeatureType rotatedWest = rotatedEdges[3];
+
+                        bool isCompatible = true;
+                        Vector2Int[] directions = {
                         Vector2Int.up * 8,
                         Vector2Int.right * 8,
                         Vector2Int.down * 8,
                         Vector2Int.left * 8
                     };
 
-                    FeatureType[] tileEdges = {
+                        FeatureType[] tileEdges = {
                         rotatedNorth,
                         rotatedEast,
                         rotatedSouth,
                         rotatedWest
                     };
-                    for (int i = 0; i < directions.Length; i++)
-                    {
-                        Vector2Int adjacentPos = pos + directions[i];
-                        if (placedTiles.ContainsKey(adjacentPos))
+                        for (int i = 0; i < directions.Length; i++)
                         {
-                            Tile adjacentTile = placedTiles[adjacentPos].GetComponent<Tile>();
-                            if (adjacentTile == null || adjacentTile.tileData == null)
+                            Vector2Int adjacentPos = pos + directions[i];
+                            if (placedTiles.ContainsKey(adjacentPos))
                             {
-                                // Invalid adjacent tile, skip
-                                continue;
-                            }
+                                Tile adjacentTile = placedTiles[adjacentPos].GetComponent<Tile>();
+                                if (adjacentTile == null || adjacentTile.tileData == null)
+                                {
+                                    // Invalid adjacent tile, skip
+                                    continue;
+                                }
 
-                            // Determine corresponding edge index
-                            int oppositeEdgeIndex = (i + 2) % 4; // Opposite direction
+                                // Determine corresponding edge index
+                                int oppositeEdgeIndex = (i + 2) % 4 + 1; // Opposite direction
 
-                            // Get the adjacent tile's edge
-                            FeatureType adjacentEdge = adjacentTile.GetFeature(oppositeEdgeIndex);
+                                // Get the adjacent tile's edge
+                                FeatureType adjacentEdge = adjacentTile.GetFeature(oppositeEdgeIndex);
 
-                            // Get current tile's edge
-                            FeatureType currentEdge = tileEdges[i];
+                                // Get current tile's edge
+                                FeatureType currentEdge = tileEdges[i];
 
-                            // Check compatibility
-                            if (!AreFeaturesCompatible(adjacentEdge, currentEdge, candidateTileData.centerFeature, adjacentTile.tileData.centerFeature))
-                            {
-                                isCompatible = false;
-                                break;
+                                // Check compatibility
+                                if (!AreFeaturesCompatible(adjacentEdge, currentEdge, candidateTileData.centerFeature, adjacentTile.tileData.centerFeature))
+                                {
+                                    isCompatible = false;
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    if (isCompatible)
-                    {
-                        return true;
+                        if (isCompatible)
+                        {
+                            return true;
+                        }
                     }
                 }
             }
+
+            return false;
         }
 
-        return false;
-    }
-
-    /// <summary>
-    /// Simulates rotation by returning the edges after rotation.
-    /// </summary>
-    /// <param name="tileData">Original TileData.</param>
-    /// <param name="rotationState">Number of 90° rotations.</param>
-    /// <returns>List of FeatureType representing [north, east, south, west] after rotation.</returns>
-    private List<FeatureType> GetRotatedEdges(TileData tileData, int rotationState)
-    {
-        // Clone the edge features
-        FeatureType[] edges = new FeatureType[] {
+        /// <summary>
+        /// Simulates rotation by returning the edges after rotation.
+        /// </summary>
+        /// <param name="tileData">Original TileData.</param>
+        /// <param name="rotationState">Number of 90° rotations.</param>
+        /// <returns>List of FeatureType representing [north, east, south, west] after rotation.</returns>
+        private List<FeatureType> GetRotatedEdges(TileData tileData, int rotationState)
+        {
+            // Clone the edge features
+            FeatureType[] edges = new FeatureType[] {
             tileData.northEdge,
             tileData.eastEdge,
             tileData.southEdge,
             tileData.westEdge
         };
 
-        // Apply rotationState times 90 degrees clockwise rotation
-        for (int i = 0; i < rotationState; i++)
-        {
-            FeatureType temp = edges[3]; // westEdge
-            edges[3] = edges[2]; // southEdge
-            edges[2] = edges[1]; // eastEdge
-            edges[1] = edges[0]; // northEdge
-            edges[0] = temp; // westEdge
+            // Apply rotationState times 90 degrees clockwise rotation
+            for (int i = 0; i < rotationState; i++)
+            {
+                FeatureType temp = edges[3]; // westEdge
+                edges[3] = edges[2]; // southEdge
+                edges[2] = edges[1]; // eastEdge
+                edges[1] = edges[0]; // northEdge
+                edges[0] = temp; // westEdge
+            }
+
+            return new List<FeatureType>(edges);
         }
 
-        return new List<FeatureType>(edges);
-    }
-
-    /// <summary>
-    /// Retrieves all available positions where tiles can be placed.
-    /// </summary>
-    /// <returns>List of Vector2Int positions.</returns>
-    private List<Vector2Int> GetAvailablePositions()
-    {
-        HashSet<Vector2Int> availablePositions = new HashSet<Vector2Int>();
-
-        foreach (Vector2Int pos in placedTiles.Keys)
+        /// <summary>
+        /// Retrieves all available positions where tiles can be placed.
+        /// </summary>
+        /// <returns>List of Vector2Int positions.</returns>
+        private List<Vector2Int> GetAvailablePositions()
         {
-            Vector2Int[] neighbors = {
+            HashSet<Vector2Int> availablePositions = new HashSet<Vector2Int>();
+
+            foreach (Vector2Int pos in placedTiles.Keys)
+            {
+                Vector2Int[] neighbors = {
                 pos + Vector2Int.up * 8,
                 pos + Vector2Int.down * 8,
                 pos + Vector2Int.left * 8,
                 pos + Vector2Int.right * 8
             };
 
-            foreach (Vector2Int neighbor in neighbors)
-            {
-                if (!placedTiles.ContainsKey(neighbor))
+                foreach (Vector2Int neighbor in neighbors)
                 {
-                    availablePositions.Add(neighbor);
+                    if (!placedTiles.ContainsKey(neighbor))
+                    {
+                        availablePositions.Add(neighbor);
+                    }
                 }
             }
+
+            return new List<Vector2Int>(availablePositions);
         }
 
-        return new List<Vector2Int>(availablePositions);
-    }
-
-    private void UpdatePreviewImage()
-    {
-        if (currentPreviewTileData != null && previewUIController != null)
+        public Tile GetTileAtPosition(Vector2Int position)
         {
-            previewUIController.UpdatePreview(currentPreviewTileData.tileSprite);
-            Debug.Log($"Previewed TileData: {currentPreviewTileData.name}");
-        }
-        else
-        {
-            Debug.Log("No TileData to preview or previewUIController is not assigned.");
-        }
-    }
-
-    /// <summary>
-    /// Places a tile at the specified position. If isStarter is true, uses starterTileData.
-    /// </summary>
-    private void PlaceTile(Vector2Int position, GameObject highlightTile = null, bool isStarter = false)
-    {
-        if (currentTileCount >= maxTiles)
-        {
-            Debug.Log("Maximum tile count reached. No more tiles can be placed.");
-            DisableFurtherPlacement();
-            return;
-        }
-
-        // Ensure the position is within bounds and not already occupied
-        if (placedTiles.ContainsKey(position))
-        {
-            Debug.LogWarning($"Cannot place tile at {position}: Position already occupied.");
-            return;
-        }
-
-        // Instantiate the tile prefab
-        GameObject newTileObj = Instantiate(tilePrefab, new Vector3(position.x, position.y, 0), Quaternion.identity);
-        Tile newTile = newTileObj.GetComponent<Tile>();
-        if (newTile == null)
-        {
-            Debug.LogError("Tile component not found on instantiated tile.");
-            Destroy(newTileObj);
-            return;
-        }
-
-        // Assign the grid position
-        newTile.gridPosition = position;
-
-        if (!isStarter)
-        {
-            // Assign the current preview tile data
-            newTile.tileData = currentPreviewTileData;
-            if (newTile.tileData == null)
+            if (placedTiles.ContainsKey(position))
             {
-                Debug.LogError($"No TileData assigned for tile at position: {position}");
-                Destroy(newTileObj);
-                return;
+                GameObject tileObj = placedTiles[position];
+                Tile tile = tileObj.GetComponent<Tile>();
+                if (tile != null)
+                {
+                    return tile;
+                }
+                Debug.LogError($"Tile component not found on tile at {position}.");
+                return null;
             }
-            newTile.AssignFeatures();
+            Debug.LogWarning($"No tile found at position: {position}");
+            return null;
+        }
 
-            int rotationState = previewUIController.GetPreviewRotationState();
-            newTile.RotateTile(rotationState);
+        private void UpdatePreviewImage()
+        {
+            if (currentPreviewTileData != null)
+            {
+                OnPreviewImageUpdate?.Invoke(currentPreviewTileData.tileSprite);
+                Debug.Log($"BoardManager: Previewed TileData: {currentPreviewTileData.name}");
+            }
+            else
+            {
+                Debug.Log("BoardManager: No TileData to preview.");
+            }
+        }
 
-            // Check compatibility with adjacent tiles
-            Vector2Int[] directions = {
+        /// <summary>
+        /// Places a tile at the specified position. If isStarter is true, uses starterTileData.
+        /// </summary>
+        public bool PlaceTile(Vector2Int position, int rotationState, GameObject highlightTile = null, bool isStarter = false)
+        {
+            if (currentTileCount >= maxTiles)
+            {
+                Debug.Log("BoardManager: Maximum tile count reached. No more tiles can be placed.");
+                OnNoMoreTilePlacements?.Invoke();
+                return false;
+            }
+
+            // Ensure the position is within bounds and not already occupied
+            if (placedTiles.ContainsKey(position))
+            {
+                Debug.LogWarning($"BoardManager: Cannot place tile at {position} - Position already occupied.");
+                return false;
+            }
+
+            // Instantiate the tile prefab
+            GameObject newTileObj = Instantiate(tilePrefab, new Vector3(position.x, position.y, 0), Quaternion.identity);
+            Tile newTile = newTileObj.GetComponent<Tile>();
+            if (newTile == null)
+            {
+                Debug.LogError("BoardManager: Tile component not found on instantiated tile.");
+                Destroy(newTileObj);
+                return false;
+            }
+
+            // Assign the grid position
+            newTile.GridPosition = position;
+
+            if (!isStarter)
+            {
+                // Assign the current preview tile data
+                newTile.tileData = currentPreviewTileData;
+                if (newTile.tileData == null)
+                {
+                    Debug.LogError($"BoardManager: No TileData assigned for tile at position: {position}");
+                    Destroy(newTileObj);
+                    return false;
+                }
+                newTile.AssignFeatures();
+
+                newTile.RotateTile(rotationState);
+
+                // Check compatibility with adjacent tiles
+                Vector2Int[] directions = {
                 Vector2Int.up * 8,
                 Vector2Int.right * 8,
                 Vector2Int.down * 8,
                 Vector2Int.left * 8
             };
 
-            FeatureType[] newTileEdges = {
+                FeatureType[] newTileEdges = {
                 newTile.CurrentNorthEdge,
                 newTile.CurrentEastEdge,
                 newTile.CurrentSouthEdge,
                 newTile.CurrentWestEdge
             };
 
-            FeatureType newTileCenter = newTile.tileData.centerFeature;
+                FeatureType newTileCenter = newTile.tileData.centerFeature;
 
-            for (int i = 0; i < directions.Length; i++)
-            {
-                Vector2Int adjacentPos = position + directions[i];
-                if (placedTiles.ContainsKey(adjacentPos))
+                for (int i = 0; i < directions.Length; i++)
                 {
-                    GameObject adjacentTileObj = placedTiles[adjacentPos];
-                    Tile adjacentTile = adjacentTileObj.GetComponent<Tile>();
-                    if (adjacentTile == null)
+                    Vector2Int adjacentPos = position + directions[i];
+                    if (placedTiles.ContainsKey(adjacentPos))
                     {
-                        Debug.LogError($"Tile component not found on adjacent tile at {adjacentPos}.");
-                        continue;
-                    }
+                        GameObject adjacentTileObj = placedTiles[adjacentPos];
+                        Tile adjacentTile = adjacentTileObj.GetComponent<Tile>();
+                        if (adjacentTile == null)
+                        {
+                            Debug.LogError($"BoardManager: Tile component not found on adjacent tile at {adjacentPos}.");
+                            continue;
+                        }
 
-                    // Determine corresponding edge index
-                    int oppositeEdgeIndex = (i + 2) % 4; // Opposite direction
-                    FeatureType existingEdge = adjacentTile.GetFeature(oppositeEdgeIndex);
-                    FeatureType newEdge = newTileEdges[i];
-                    FeatureType existingCenter = adjacentTile.CurrentCenterFeature;
+                        // Determine corresponding edge index
+                        int oppositeEdgeIndex = (i + 2) % 4 + 1; // Opposite direction
+                        FeatureType existingEdge = adjacentTile.GetFeature(oppositeEdgeIndex);
+                        FeatureType newEdge = newTileEdges[i];
+                        FeatureType existingCenter = adjacentTile.CurrentCenterFeature;
 
-                    if (!AreFeaturesCompatible(existingEdge, newEdge, newTileCenter, existingCenter))
-                    {
-                        Debug.LogWarning($"Cannot place tile at {position}: Feature mismatch on {directions[i]} side.");
-                        Destroy(newTileObj);
-                        return;
+                        if (!AreFeaturesCompatible(existingEdge, newEdge, newTileCenter, existingCenter))
+                        {
+                            Debug.LogWarning($"BoardManager: Cannot place tile at {position}: Feature mismatch on {directions[i]} side.");
+                            Destroy(newTileObj);
+                            return false;
+                        }
                     }
                 }
-            }
 
-            // All edges are compatible; proceed
+                // All edges are compatible; proceed
 
-            if (highlightTile != null)
-            {
-                Debug.Log($"Destroying highlight tile: {highlightTile.name}");
-                Destroy(highlightTile);
+                if (highlightTile != null)
+                {
+                    Debug.Log($"BoardManager: Destroying highlight tile: {highlightTile.name}");
+                    Destroy(highlightTile);
+                }
+                else
+                {
+                    Debug.LogWarning("BoardManager: Attempted to destroy a null highlight tile.");
+                }
             }
             else
             {
-                Debug.LogWarning("Attempted to destroy a null highlight tile.");
+                // Assign a specific TileData for the starter tile, if different
+                // For simplicity, assuming the first tile is the starter
+                // Alternatively, have a separate starter tile or assign as needed
+                Debug.Log("BoardManager: Placing starter tile.");
             }
+
+            placedTiles.Add(position, newTileObj);
+            currentTileCount++;
+            Debug.Log($"Tile placed at {position}. Current tile count: {currentTileCount}");
+
+
+            // After placing a tile, draw the next one and update highlights
+            DrawNextTile();
+            HighlightAvailablePositions();
+            return true;
         }
-        else
+
+        /// <summary>
+        /// Checks if two features are compatible based on game rules.
+        /// </summary>
+        private bool AreFeaturesCompatible(FeatureType existingEdge, FeatureType newEdge, FeatureType newCenter, FeatureType existingCenter)
         {
-            // Assign a specific TileData for the starter tile, if different
-            // For simplicity, assuming the first tile is the starter
-            // Alternatively, have a separate starter tile or assign as needed
-            Debug.Log("Placing starter tile.");
-        }
+            if (existingEdge == FeatureType.NONE || newEdge == FeatureType.NONE)
+                return false;
 
-        previewUIController.ResetPreviewRotationState();
-        placedTiles.Add(position, newTileObj);
-        currentTileCount++;
-        Debug.Log($"Tile placed at {position}. Current tile count: {currentTileCount}");
-
-
-        // After placing a tile, draw the next one and update highlights
-        DrawNextTile();
-        HighlightAvailablePositions();
-    }
-
-    private void DisableFurtherPlacement()
-    {
-        Debug.Log("Disabling further tile placements.");
-        // Hide or disable the preview image
-        if (previewUIController != null)
-        {
-            previewUIController.HidePreview();
-            previewUIController.DisableRotation();
-        }
-        // Optionally, display a "Game Over" message or UI
-        // You can also disable input or other relevant components
-    }
-
-    /// <summary>
-    /// Checks if two features are compatible based on game rules.
-    /// </summary>
-    private bool AreFeaturesCompatible(FeatureType existingEdge, FeatureType newEdge, FeatureType newCenter, FeatureType existingCenter)
-    {
-        if (existingEdge == FeatureType.NONE || newEdge == FeatureType.NONE)
-            return false;
-
-        // Iterate through each feature in existingEdge
-        foreach (FeatureType feature in Enum.GetValues(typeof(FeatureType)))
-        {
-            if (existingEdge.HasFlag(feature))
+            // Iterate through each feature in existingEdge
+            foreach (FeatureType feature in Enum.GetValues(typeof(FeatureType)))
             {
-                switch (feature)
+                if (existingEdge.HasFlag(feature))
                 {
-                    case FeatureType.CITY:
-                        if (!newEdge.HasFlag(FeatureType.CITY))
-                            return false;
-                        break;
-                    case FeatureType.ROAD:
-                        if (!(newEdge.HasFlag(FeatureType.ROAD) ||
-                              newEdge.HasFlag(FeatureType.ROAD_INTERSECTION) ||
-                              newEdge.HasFlag(FeatureType.ROAD_END)))
-                            return false;
-                        break;
-                    case FeatureType.ROAD_INTERSECTION:
-                        if (!(newEdge.HasFlag(FeatureType.ROAD) ||
-                              newEdge.HasFlag(FeatureType.ROAD_INTERSECTION) ||
-                              newEdge.HasFlag(FeatureType.ROAD_END)))
-                            return false;
-                        break;
-                    case FeatureType.ROAD_END:
-                        if (!(newEdge.HasFlag(FeatureType.ROAD) ||
-                              newEdge.HasFlag(FeatureType.CITY) ||
-                              newEdge.HasFlag(FeatureType.ROAD_INTERSECTION)))
-                            return false;
-                        break;
-                    case FeatureType.MONASTERY:
-                        // Define MONASTERY compatibility
-                        if (!newEdge.HasFlag(FeatureType.MONASTERY))
-                            return false;
-                        break;
-                    case FeatureType.FIELD:
-                        // Define FIELD compatibility
-                        if (!newEdge.HasFlag(FeatureType.FIELD))
-                            return false;
-                        break;
-                    case FeatureType.SHIELD:
-                        // Define SHIELD compatibility
-                        // For example, SHIELD might not interfere with other features
-                        // Or it might have specific rules
-                        // Here, assuming SHIELD is a special marker and doesn't affect compatibility
-                        // Therefore, no action needed
-                        break;
-                    default:
-                        break;
+                    switch (feature)
+                    {
+                        case FeatureType.CITY:
+                            if (!newEdge.HasFlag(FeatureType.CITY))
+                                return false;
+                            break;
+                        case FeatureType.ROAD:
+                            if (!(newEdge.HasFlag(FeatureType.ROAD) ||
+                                  newEdge.HasFlag(FeatureType.ROAD_INTERSECTION) ||
+                                  newEdge.HasFlag(FeatureType.ROAD_END)))
+                                return false;
+                            break;
+                        case FeatureType.ROAD_INTERSECTION:
+                            if (!(newEdge.HasFlag(FeatureType.ROAD) ||
+                                  newEdge.HasFlag(FeatureType.ROAD_INTERSECTION) ||
+                                  newEdge.HasFlag(FeatureType.ROAD_END)))
+                                return false;
+                            break;
+                        case FeatureType.ROAD_END:
+                            if (!(newEdge.HasFlag(FeatureType.ROAD) ||
+                                  newEdge.HasFlag(FeatureType.CITY) ||
+                                  newEdge.HasFlag(FeatureType.ROAD_INTERSECTION)))
+                                return false;
+                            break;
+                        case FeatureType.MONASTERY:
+                            // Define MONASTERY compatibility
+                            if (!newEdge.HasFlag(FeatureType.MONASTERY))
+                                return false;
+                            break;
+                        case FeatureType.FIELD:
+                            // Define FIELD compatibility
+                            if (!newEdge.HasFlag(FeatureType.FIELD))
+                                return false;
+                            break;
+                        case FeatureType.SHIELD:
+                            // Define SHIELD compatibility
+                            // For example, SHIELD might not interfere with other features
+                            // Or it might have specific rules
+                            // Here, assuming SHIELD is a special marker and doesn't affect compatibility
+                            // Therefore, no action needed
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
+
+            // Additional checks based on center features
+            // For example, ensure that if roads pass through the center, they continue seamlessly
+
+            // Example: If new tile has ROAD_INTERSECTION at center, ensure road continuity
+            if (newCenter.HasFlag(FeatureType.ROAD_INTERSECTION))
+            {
+                // Implement specific logic if roads must pass through intersections
+                // This could involve ensuring that roads are connected to at least two edges
+            }
+
+            if (existingCenter.HasFlag(FeatureType.ROAD_INTERSECTION))
+            {
+                // Similar logic if the existing tile has a ROAD_INTERSECTION at center
+            }
+
+            // SHIELD handling can be implemented here if it affects compatibility
+
+            return true;
         }
 
-        // Additional checks based on center features
-        // For example, ensure that if roads pass through the center, they continue seamlessly
-
-        // Example: If new tile has ROAD_INTERSECTION at center, ensure road continuity
-        if (newCenter.HasFlag(FeatureType.ROAD_INTERSECTION))
+        /// <summary>
+        /// Highlights all valid positions where tiles can be placed.
+        /// </summary>
+        private void HighlightAvailablePositions()
         {
-            // Implement specific logic if roads must pass through intersections
-            // This could involve ensuring that roads are connected to at least two edges
-        }
+            Debug.Log("Highlighting available positions");
 
-        if (existingCenter.HasFlag(FeatureType.ROAD_INTERSECTION))
-        {
-            // Similar logic if the existing tile has a ROAD_INTERSECTION at center
-        }
-
-        // SHIELD handling can be implemented here if it affects compatibility
-
-        return true;
-    }
-
-    /// <summary>
-    /// Highlights all valid positions where tiles can be placed.
-    /// </summary>
-    private void HighlightAvailablePositions()
-    {
-        Debug.Log("Highlighting available positions");
-
-        HashSet<Vector2Int> allAvailablePositions = new HashSet<Vector2Int>();
+            HashSet<Vector2Int> allAvailablePositions = new HashSet<Vector2Int>();
 
 
-        foreach (Vector2Int pos in placedTiles.Keys)
-        {
-            Vector2Int[] neighbors = {
+            foreach (Vector2Int pos in placedTiles.Keys)
+            {
+                Vector2Int[] neighbors = {
                 pos + Vector2Int.up * 8,
                 pos + Vector2Int.down * 8,
                 pos + Vector2Int.left * 8,
                 pos + Vector2Int.right * 8
             };
 
-            foreach (Vector2Int neighbor in neighbors)
-            {
-                if (!placedTiles.ContainsKey(neighbor))
+                foreach (Vector2Int neighbor in neighbors)
                 {
-                    allAvailablePositions.Add(neighbor);
+                    if (!placedTiles.ContainsKey(neighbor))
+                    {
+                        allAvailablePositions.Add(neighbor);
+                    }
+                }
+            }
+
+            foreach (Vector2Int pos in allAvailablePositions)
+            {
+                if (allAvailablePositions.Contains(pos) && !currentHighlightPositions.Contains(pos))
+                {
+                    Debug.Log("BoardManager: Highlighting position: " + pos);
+                    GameObject highlightTile = Instantiate(highlightTilePrefab, new Vector3(pos.x, pos.y, 0), Quaternion.identity);
+                    currentHighlightPositions.Add(pos);
+                    SpriteRenderer sr = highlightTile.GetComponent<SpriteRenderer>();
+                    if (sr.sprite == null)
+                    {
+                        Debug.LogError("BoardManager: Failed to assign sprite to tile at position: " + pos);
+                    }
+                    else
+                    {
+                        Debug.Log("BoardManager: Assigned sprite to tile at position: " + pos);
+                    }
+                    HighlightTile ht = highlightTile.GetComponent<HighlightTile>();
+                    if (ht != null)
+                    {
+                        ht.TilePosition = pos; // Assign the position
+                        OnHighlightTileCreated?.Invoke(ht); // Notify subscribers
+                    }
+                    else
+                    {
+                        Debug.LogError("HighlightTile script not found on HighlightTilePrefab.");
+                    }
                 }
             }
         }
 
-        foreach (Vector2Int pos in allAvailablePositions)
+        public bool IsFeatureComplete(Tile tile, FeatureType featureType, int featureIndex)
         {
-            if (allAvailablePositions.Contains(pos) && !currentHighlightPositions.Contains(pos))
+            return featureType switch
             {
-                Debug.Log("Highlighting position: " + pos);
-                GameObject highlightTile = Instantiate(highlightTilePrefab, new Vector3(pos.x, pos.y, 0), Quaternion.identity);
-                currentHighlightPositions.Add(pos);
-                SpriteRenderer sr = highlightTile.GetComponent<SpriteRenderer>();
-                if (sr.sprite == null)
+                FeatureType.CITY => IsRoadComplete(tile, featureIndex),
+                FeatureType.ROAD => IsRoadComplete(tile, featureIndex),
+                FeatureType.MONASTERY => IsMonasteryComplete(tile, featureIndex),
+                _ => throw new ArgumentException("Invalid feature!"),
+            };
+        }
+
+        private bool IsMonasteryComplete(Tile tile, int featureIndex)
+        {
+            Vector2Int monasteryPosition = tile.GridPosition;
+            Vector2Int[] adjacentAndCornerPositions = new Vector2Int[]
+            {
+                monasteryPosition + Vector2Int.up * 8,
+                monasteryPosition + Vector2Int.right * 8,
+                monasteryPosition + Vector2Int.down * 8,
+                monasteryPosition + Vector2Int.left * 8,
+                monasteryPosition + (Vector2Int.up + Vector2Int.left) * 8,
+                monasteryPosition + (Vector2Int.up + Vector2Int.right) * 8,
+                monasteryPosition + (Vector2Int.down + Vector2Int.left) * 8,
+                monasteryPosition + (Vector2Int.down + Vector2Int.right) * 8
+            };
+            foreach (var position in adjacentAndCornerPositions)
+            {
+                if (!placedTiles.ContainsKey(position))
                 {
-                    Debug.LogError("Failed to assign sprite to tile at position: " + pos);
+                    return false;
                 }
-                else
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Determines if a road feature is complete.
+        /// </summary>
+        private bool IsRoadComplete(Tile tile, int featureIndex)
+        {
+            TileFeatureKey startingKey = new TileFeatureKey(tile, FeatureType.ROAD, featureIndex);
+            bool isClosed = false;
+
+            List<TileFeatureKey> connectedRoads = GetConnectedFeatureKeys(tile, FeatureType.ROAD, featureIndex);
+            int countEnds = 0;
+            foreach (var roadKey in connectedRoads)
+            {
+                FeatureType featureType = roadKey.featureType;
+                if (((featureType & FeatureType.ROAD_END) == FeatureType.ROAD_END) ||
+                    ((featureType & FeatureType.ROAD_INTERSECTION) == FeatureType.ROAD_INTERSECTION))
                 {
-                    Debug.Log("Assigned sprite to tile at position: " + pos);
+                    countEnds++;
+                }
+            }
+            if (countEnds == 2)
+            {
+                isClosed = true;
+            }
+            else if (countEnds > 2)
+            {
+                throw new ArgumentException("Road cannot have more than 2 ends.");
+            }
+            return isClosed;
+        }
+
+        /// <summary>
+        /// Retrieves the connected feature keys for a given feature.
+        /// </summary>
+        public List<TileFeatureKey> GetConnectedFeatureKeys(Tile tile, FeatureType featureType, int featureIndex)
+        {
+            List<TileFeatureKey> connectedKeys = new List<TileFeatureKey>();
+            HashSet<TileFeatureKey> visitedKeys = new HashSet<TileFeatureKey>();
+            TileFeatureKey currentKey = new TileFeatureKey(tile, featureType, featureIndex);
+
+            TraverseConnectedFeatures(currentKey, visitedKeys, connectedKeys);
+
+            return connectedKeys;
+        }
+
+        private void TraverseConnectedFeatures(TileFeatureKey currentKey, HashSet<TileFeatureKey> visitedKeys, List<TileFeatureKey> connectedKeys)
+        {
+            if (visitedKeys.Contains(currentKey))
+                return;
+
+            visitedKeys.Add(currentKey);
+            connectedKeys.Add(currentKey);
+
+            int currentFeatureIndex = currentKey.featureIndex;
+            Tile currentTile = currentKey.tile;
+            FeatureType currentFeatureType = currentKey.featureType;
+
+            // Check for multiple adjacent features on the same tile
+            for (int i = 1; i <= 4; i++)
+            {
+                if (i == currentFeatureIndex)
+                    continue;
+
+                FeatureType adjacentFeatures = currentTile.GetFeature(i);
+                if ((adjacentFeatures & currentFeatureType) != 0) // Check if any of the features match
+                {
+                    TraverseConnectedFeatures(currentKey, visitedKeys, connectedKeys);
+                }
+            }
+
+            // Check all four directions for connected features
+            for (int i = 1; i <= 4; i++)
+            {
+                Vector2Int direction = Vector2Int.zero;
+                switch (i)
+                {
+                    case 1:
+                        direction = Vector2Int.up;
+                        break;
+                    case 2:
+                        direction = Vector2Int.right;
+                        break;
+                    case 3:
+                        direction = Vector2Int.down;
+                        break;
+                    case 4:
+                        direction = Vector2Int.left;
+                        break;
                 }
 
-                HighlightTile ht = highlightTile.GetComponent<HighlightTile>();
-                if (ht != null)
+                Vector2Int adjacentPos = currentTile.GridPosition + direction * 8;
+                Tile adjacentTile = GetTileAtPosition(adjacentPos);
+                if (adjacentTile != null)
                 {
-                    ht.boardManager = this;
-                }
-                else
-                {
-                    Debug.LogError("HighlightTile script not found on HighlightTilePrefab.");
+                    int adjacentFeatureIndex = Converters.ConvertDirectionToEdgeIndex(direction);
+                    if (adjacentFeatureIndex > 0)
+                    {
+                        FeatureType adjacentFeatures = adjacentTile.GetFeature(adjacentFeatureIndex);
+                        if ((adjacentFeatures & currentFeatureType) != 0) // Check if any of the features match
+                        {
+                            TraverseConnectedFeatures(currentKey, visitedKeys, connectedKeys);
+                        }
+                    }
                 }
             }
         }
-
-    }
-
-    /// <summary>
-    /// Called when a highlight tile is selected (clicked).
-    /// </summary>
-    public void OnTileSelected(Vector2Int position, GameObject highlightTile)
-    {
-        Debug.Log($"Tile selected at position: {position}");
-        PlaceTile(position, highlightTile);
     }
 }

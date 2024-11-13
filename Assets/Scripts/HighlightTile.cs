@@ -1,24 +1,26 @@
+using System;
 using UnityEngine;
 
-public class HighlightTile : MonoBehaviour
+namespace Assets.Scripts
 {
-    [HideInInspector]
-    public BoardManager boardManager; // Reference to the BoardManager
-
-    [HideInInspector]
-    public Vector2Int tilePosition; // Position this highlight tile represents
-
-    private void OnMouseDown()
+	public class HighlightTile : MonoBehaviour
 	{
-		if (boardManager != null)
+        public event Action<Vector2Int, GameObject> OnTileClicked;
+
+        [HideInInspector]
+		public Vector2Int TilePosition;
+
+		private void OnMouseDown()
 		{
-			Vector2Int position = new Vector2Int(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.y));
-			boardManager.OnTileSelected(position, this.gameObject);
-			Debug.Log("Highlight tile at position " + position + " clicked.");
-		}
-		else
-		{
-			Debug.LogError("BoardManager reference not set on HighlightTile.");
-		}
+            if (OnTileClicked != null)
+            {
+                OnTileClicked?.Invoke(TilePosition, this.gameObject);
+                Debug.Log("Highlight tile at position " + TilePosition + " clicked.");
+            }
+            else
+            {
+                Debug.LogError("No subscribers for OnTileClicked event.");
+            }
+        }
 	}
 }
