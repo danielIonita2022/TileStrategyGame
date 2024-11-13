@@ -13,14 +13,46 @@ namespace Assets.Scripts
         [SerializeField] private BoardManager boardManager;
         [SerializeField] private PreviewUIController previewUIController;
         private MeepleManager meepleManager;
-
-        private void Start()
+        private List<Player> players = new List<Player>();
+        private int currentPlayerIndex = 0;
+        void Start()
         {
+            InitializePlayers();
             boardManager = BoardManager.Instance;
             boardManager.OnNoMoreTilePlacements += DisableFurtherPlacement;
             boardManager.OnHighlightTileCreated += HandleHighlightTileCreated;
             boardManager.OnPreviewImageUpdate += HandlePreviewImageUpdate;
             meepleManager = MeepleManager.Instance;
+        }
+
+        private void InitializePlayers()
+        {
+            // Example initialization. Replace with dynamic player setup if needed.
+            players.Add(new Player("Alice", PlayerColor.RED, 1));
+            players.Add(new Player("Bob", PlayerColor.BLUE, 2));
+        }
+
+        /// <summary>
+        /// Switches the turn to the next player.
+        /// </summary>
+        private void SwitchTurn()
+        {
+            currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
+            Debug.Log($"GameManager: It's now {players[currentPlayerIndex].PlayerName}'s turn.");
+
+            // Update UI to reflect the current player's turn
+            //uiManager.UpdateCurrentPlayer(players[currentPlayerIndex]);
+        }
+
+        /// <summary>
+        /// Ends the game.
+        /// </summary>
+        private void EndGame()
+        {
+            Debug.Log("GameManager: Ending the game.");
+            // Implement your end-of-game logic here
+            // Example: Display end-game UI, calculate scores, determine winner, etc.
+            //uiManager.DisplayEndGameScreen(players);
         }
 
         /// <summary>
@@ -34,6 +66,7 @@ namespace Assets.Scripts
             if (hasPlacedTile)
             {
                 previewUIController.ResetPreviewRotationState();
+                SwitchTurn();
             }
         }
 
@@ -46,8 +79,7 @@ namespace Assets.Scripts
                 previewUIController.HidePreview();
                 previewUIController.DisableRotation();
             }
-            // Optionally, display a "Game Over" message or UI
-            // You can also disable input or other relevant components
+            EndGame();
         }
 
         /// <summary>
