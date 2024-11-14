@@ -27,6 +27,7 @@ namespace Assets.Scripts
         private int currentTileCount = 0;
 
         public event Action OnNoMoreTilePlacements;
+        public event Action<Tile> OnTilePlaced;
         public event Action<Sprite> OnPreviewImageUpdate;
         public event Action<HighlightTile> OnHighlightTileCreated;
 
@@ -88,7 +89,7 @@ namespace Assets.Scripts
             Debug.Log("Shuffled the tile deck.");
         }
 
-        private void DrawNextTile(bool isStarter = false)
+        public void DrawNextTile(bool isStarter = false)
         {
             int attempts = 0;
             int maxAttempts = tileDeck.Count;
@@ -380,6 +381,8 @@ namespace Assets.Scripts
                 {
                     Debug.LogWarning("BoardManager: Attempted to destroy a null highlight tile.");
                 }
+
+                OnTilePlaced?.Invoke(newTile);
             }
             else
             {
@@ -387,16 +390,17 @@ namespace Assets.Scripts
                 // For simplicity, assuming the first tile is the starter
                 // Alternatively, have a separate starter tile or assign as needed
                 Debug.Log("BoardManager: Placing starter tile.");
+                placedTiles.Add(position, newTileObj);
+                currentTileCount++;
+                HighlightAvailablePositions();
+                return true;
             }
 
             placedTiles.Add(position, newTileObj);
             currentTileCount++;
             Debug.Log($"Tile placed at {position}. Current tile count: {currentTileCount}");
 
-
             // After placing a tile, draw the next one and update highlights
-            DrawNextTile();
-            HighlightAvailablePositions();
             return true;
         }
 
@@ -483,7 +487,7 @@ namespace Assets.Scripts
         /// <summary>
         /// Highlights all valid positions where tiles can be placed.
         /// </summary>
-        private void HighlightAvailablePositions()
+        public void HighlightAvailablePositions()
         {
             Debug.Log("Highlighting available positions");
 

@@ -15,14 +15,20 @@ namespace Assets.Scripts
         private MeepleManager meepleManager;
         private List<Player> players = new List<Player>();
         private int currentPlayerIndex = 0;
-        void Start()
+        void Awake()
         {
             InitializePlayers();
             boardManager = BoardManager.Instance;
+            boardManager.OnTilePlaced += HandleTilePlaced;
             boardManager.OnNoMoreTilePlacements += DisableFurtherPlacement;
             boardManager.OnHighlightTileCreated += HandleHighlightTileCreated;
             boardManager.OnPreviewImageUpdate += HandlePreviewImageUpdate;
             meepleManager = MeepleManager.Instance;
+        }
+
+        void Start()
+        {
+            
         }
 
         private void InitializePlayers()
@@ -39,6 +45,11 @@ namespace Assets.Scripts
         {
             currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
             Debug.Log($"GameManager: It's now {players[currentPlayerIndex].PlayerName}'s turn.");
+
+            boardManager.DrawNextTile();
+            boardManager.HighlightAvailablePositions();
+            previewUIController.EnableRotation();
+            previewUIController.ShowPreview();
 
             // Update UI to reflect the current player's turn
             //uiManager.UpdateCurrentPlayer(players[currentPlayerIndex]);
@@ -66,8 +77,15 @@ namespace Assets.Scripts
             if (hasPlacedTile)
             {
                 previewUIController.ResetPreviewRotationState();
+                previewUIController.HidePreview();
+                previewUIController.DisableRotation();
                 SwitchTurn();
             }
+        }
+
+        private void HandleTilePlaced(Tile tile)
+        {
+            //meepleManager.PlaceMeeple(tile)
         }
 
         private void DisableFurtherPlacement()

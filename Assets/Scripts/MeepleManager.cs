@@ -15,7 +15,7 @@ namespace Assets.Scripts
         // Singleton Instance
         public static MeepleManager Instance { get; private set; }
 
-        private BoardManager boardManager;
+        [SerializeField] private BoardManager boardManager;
 
         // Dictionary to map Tile and Feature to Meeple
         private Dictionary<TileFeatureKey, Meeple> tileFeatureMeepleMap = new Dictionary<TileFeatureKey, Meeple>();

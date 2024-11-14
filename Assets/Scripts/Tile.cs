@@ -15,12 +15,6 @@ namespace Assets.Scripts
         private int rotationState = 0;
         private readonly float[] rotationAngles = { 0f, 90f, 180f, 270f };
 
-        private FeatureType _currentNorthEdge;
-        private FeatureType _currentEastEdge;
-        private FeatureType _currentSouthEdge;
-        private FeatureType _currentWestEdge;
-        private FeatureType _currentCenterFeature;
-
         public FeatureType CurrentNorthEdge { get; set; }
         public FeatureType CurrentEastEdge { get; set; }
         public FeatureType CurrentSouthEdge { get; set; }
