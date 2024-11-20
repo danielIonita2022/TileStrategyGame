@@ -53,6 +53,11 @@ namespace Assets.Scripts
             }
         }
 
+        public Vector3 GridToWorldPosition2D()
+        {
+            return new Vector3(GridPosition[0], GridPosition[1], 0);
+        }
+
         public void AssignFeatures()
         {
             if (tileData != null)
@@ -86,6 +91,18 @@ namespace Assets.Scripts
                 default:
                     return FeatureType.NONE;
             }
+        }
+
+        public List<(FeatureType, int)> GetAllFeatures()
+        {
+            List<(FeatureType, int)> featuresAndEdgeIndexes = new List<(FeatureType, int)>();
+
+            for (int i = 0; i < 5; i++)
+            {
+                FeatureType feature = GetFeature(i);
+                featuresAndEdgeIndexes.Add((feature, i));
+            }
+            return featuresAndEdgeIndexes;
         }
 
         private void HandleSpecialFeatures()

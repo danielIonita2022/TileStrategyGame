@@ -8,11 +8,10 @@ namespace Assets.Scripts
 {
     public enum PlayerColor
     {
-        NONE = 0,
+        GRAY = 0,
         RED = 1,
         BLUE = 2,
         GREEN = 3,
-        YELLOW = 4,
-        BLACK = 5
+        YELLOW = 4
     }
 }

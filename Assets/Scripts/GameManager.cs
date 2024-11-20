@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using TreeEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using UnityEngine.WSA;
 
 namespace Assets.Scripts
 {
@@ -15,11 +16,14 @@ namespace Assets.Scripts
         private MeepleManager meepleManager;
         private List<Player> players = new List<Player>();
         private int currentPlayerIndex = 0;
+
+        private Player currentPlayer;
+        private Tile currentTile;
+
         void Awake()
         {
             InitializePlayers();
             boardManager = BoardManager.Instance;
-            boardManager.OnTilePlaced += HandleTilePlaced;
             boardManager.OnNoMoreTilePlacements += DisableFurtherPlacement;
             boardManager.OnHighlightTileCreated += HandleHighlightTileCreated;
             boardManager.OnPreviewImageUpdate += HandlePreviewImageUpdate;
@@ -35,7 +39,7 @@ namespace Assets.Scripts
         {
             // Example initialization. Replace with dynamic player setup if needed.
             players.Add(new Player("Alice", PlayerColor.RED, 1));
-            players.Add(new Player("Bob", PlayerColor.BLUE, 2));
+            //players.Add(new Player("Bob", PlayerColor.BLUE, 2));
         }
 
         /// <summary>
@@ -73,19 +77,80 @@ namespace Assets.Scripts
         {
             Debug.Log($"GameManager: Tile selected at position: {position}");
             int rotationState = previewUIController.GetPreviewRotationState();
-            bool hasPlacedTile = boardManager.PlaceTile(position, rotationState, highlightTile);
-            if (hasPlacedTile)
+            Tile placedTile = boardManager.PlaceTile(position, rotationState, highlightTile);
+            if (placedTile != null)
             {
                 previewUIController.ResetPreviewRotationState();
                 previewUIController.HidePreview();
                 previewUIController.DisableRotation();
+                InitiateMeeplePlacement(players[currentPlayerIndex], placedTile);
+            }
+        }
+
+        private void InitiateMeeplePlacement(Player player, Tile placedTile)
+        {
+            currentPlayer = player;
+            currentTile = placedTile;
+
+            List<(FeatureType, int)> featuresAndEdgeIndexes = placedTile.GetAllFeatures();
+            List<(FeatureType, int, MeepleData)> availableFeaturesForMeeples = new List<(FeatureType, int, MeepleData)>();
+
+            foreach (var featureAndEdgeIndex in featuresAndEdgeIndexes)
+            {
+                FeatureType featureType = featureAndEdgeIndex.Item1;
+                int edgeIndex = featureAndEdgeIndex.Item2;
+                if (meepleManager == null)
+                {
+                    meepleManager = MeepleManager.Instance;
+                }
+                bool canPlaceMeeple = meepleManager.CanPlaceMeeple(placedTile, featureType, edgeIndex);
+                if (canPlaceMeeple)
+                {
+                    MeepleData candidateMeepleData = meepleManager.PlaceMeeple(placedTile, featureType, edgeIndex);
+                    availableFeaturesForMeeples.Add((featureType, edgeIndex, candidateMeepleData));
+                }
+            }
+            if (availableFeaturesForMeeples.Count != 0)
+            {
+                Vector3 vector3 = new Vector3(placedTile.GridPosition[0], placedTile.GridPosition[1], 0);
+                previewUIController.DisplayMeepleOptions(vector3, availableFeaturesForMeeples);
+
+                List<Meeple> instantiatedGrayMeeples = previewUIController.InstantiatedGrayMeeples;
+
+                foreach (var grayMeeple in instantiatedGrayMeeples)
+                {
+                    grayMeeple.OnGrayMeepleClicked += OnMeepleSelected;
+                }
+            }
+            else
+            {
+                Debug.Log("GameManager: No meeple placement options available.");
                 SwitchTurn();
             }
         }
 
-        private void HandleTilePlaced(Tile tile)
+        private void OnMeepleSelected(Meeple grayMeeple)
         {
-            //meepleManager.PlaceMeeple(tile)
+            PlayerColor playerColor = currentPlayer.PlayerColor;
+            MeepleData grayMeepleData = grayMeeple.MeepleData;
+            if (grayMeepleData == null)
+            {
+                Debug.LogError("GameManager: MeepleData is null.");
+                return;
+            }
+            MeepleType meepleType = grayMeepleData.GetMeepleType();
+            grayMeepleData.SetPlayerColor(playerColor);
+            grayMeepleData.SetMeepleType(meepleType);
+            grayMeeple.UpdateMeepleVisual(meepleType, playerColor);
+            previewUIController.RemoveUIMeeple(grayMeeple);
+            grayMeeple.OnGrayMeepleClicked -= OnMeepleSelected;
+            foreach (var meeple in previewUIController.InstantiatedGrayMeeples)
+            {
+                meeple.OnGrayMeepleClicked -= OnMeepleSelected;
+                meepleManager.RemoveMeeple(meeple.MeepleData);
+            }
+            previewUIController.ClearMeepleOptions();
+            SwitchTurn();
         }
 
         private void DisableFurtherPlacement()

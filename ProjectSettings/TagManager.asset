@@ -42,3 +42,9 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Tiles
+    uniqueID: 1024232501
+    locked: 0
+  - name: Meeples
+    uniqueID: 2145509839
+    locked: 0

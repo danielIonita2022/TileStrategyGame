@@ -11,17 +11,14 @@ namespace Assets.Scripts
     {
         public static MeepleType ConvertFeatureTypeToMeepleType(FeatureType type)
         {
-            switch (type)
-            {
-                case FeatureType.ROAD:
-                    return MeepleType.Road;
-                case FeatureType.CITY:
-                    return MeepleType.Knight;
-                case FeatureType.MONASTERY:
-                    return MeepleType.Bishop;
-                default:
-                    throw new ArgumentException("Invalid FeatureType", nameof(type));
-            }
+            if (type == FeatureType.ROAD)
+                return MeepleType.Road;
+            else if (type == FeatureType.CITY)
+                return MeepleType.Knight;
+            else if ((type & FeatureType.MONASTERY) == FeatureType.MONASTERY)
+                return MeepleType.Bishop;
+            else
+                throw new ArgumentException($"Invalid FeatureType {type}", nameof(type));
         }
 
         public static int ConvertDirectionToEdgeIndex(Vector2Int direction)
@@ -29,15 +26,34 @@ namespace Assets.Scripts
             if (direction == Vector2Int.zero)
                 return 0;
             if (direction == Vector2Int.up)
-                return 1;
-            if (direction == Vector2Int.right)
-                return 2;
-            if (direction == Vector2Int.down)
                 return 3;
-            if (direction == Vector2Int.left)
+            if (direction == Vector2Int.right)
                 return 4;
+            if (direction == Vector2Int.down)
+                return 1;
+            if (direction == Vector2Int.left)
+                return 2;
 
             throw new ArgumentException("Invalid direction", nameof(direction));
+        }
+
+        public static string ConvertPlayerColorToString(PlayerColor color)
+        {
+            switch (color)
+            {
+                case PlayerColor.GRAY:
+                    return "Gray";
+                case PlayerColor.RED:
+                    return "Red";
+                case PlayerColor.BLUE:
+                    return "Blue";
+                case PlayerColor.GREEN:
+                    return "Green";
+                case PlayerColor.YELLOW:
+                    return "Yellow";
+                default:
+                    throw new ArgumentException("Invalid PlayerColor", nameof(color));
+            }
         }
     }
 }

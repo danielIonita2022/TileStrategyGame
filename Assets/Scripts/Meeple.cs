@@ -7,46 +7,63 @@ using UnityEngine;
 
 namespace Assets.Scripts
 {
-    public enum MeepleType
-    {
-        Road,
-        Knight,
-        Bishop
-    }
 
     public class Meeple : MonoBehaviour
     {
-        [SerializeField] private MeepleType meepleType;
-        private PlayerColor playerColor;
-        private SpriteRenderer spriteRenderer;
+        
+        [SerializeField] public SpriteRenderer SpriteRenderer;
+        public MeepleData MeepleData;
 
-        public Meeple(PlayerColor color, MeepleType type)
+        public event Action<Meeple> OnGrayMeepleClicked;
+
+        private void Awake()
         {
-            playerColor = color;
-            meepleType = type;
+            MeepleData = new MeepleData(PlayerColor.GRAY, MeepleType.Road);
+            SpriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        void OnMouseDown()
+        {
+            PlayerColor playerColor = MeepleData.GetPlayerColor();
+            if (playerColor == PlayerColor.GRAY)
+            {
+                Debug.Log("Meeple: Gray meeple clicked");
+                OnGrayMeepleClicked?.Invoke(this);
+            }
+            else
+            {
+                Debug.Log("Meeple: Player meeple clicked, nothing happens");
+            }
+
         }
 
         /// <summary>
         /// Updates the visual representation based on meeple type and player color.
         /// </summary>
-        private void UpdateMeepleVisual(MeepleType type, PlayerColor color)
+        public void UpdateMeepleVisual(MeepleType type, PlayerColor color)
         {
-            if (spriteRenderer == null)
-                return;
+            if (SpriteRenderer == null)
+            {
+                SpriteRenderer = GetComponent<SpriteRenderer>();
+            }
+            MeepleData.SetMeepleType(type);
+            MeepleData.SetPlayerColor(color);
+
+            string colorString = Converters.ConvertPlayerColorToString(color);
 
             switch (type)
             {
                 case MeepleType.Knight:
-                    spriteRenderer.sprite = Resources.Load<Sprite>($"Art/Meeples/{color}Knight");
+                    SpriteRenderer.sprite = Resources.Load<Sprite>($"Sprites/Meeples/{colorString}Knight");
                     break;
                 case MeepleType.Bishop:
-                    spriteRenderer.sprite = Resources.Load<Sprite>($"Art/Meeples/{color}Bishop");
+                    SpriteRenderer.sprite = Resources.Load<Sprite>($"Sprites/Meeples/{colorString}Bishop");
                     break;
                 case MeepleType.Road:
-                    spriteRenderer.sprite = Resources.Load<Sprite>($"Art/Meeples/{color}Meeple");
+                    SpriteRenderer.sprite = Resources.Load<Sprite>($"Sprites/Meeples/{colorString}Meeple");
                     break;
                 default:
-                    spriteRenderer.sprite = null;
+                    SpriteRenderer.sprite = null;
                     break;
             }
         }

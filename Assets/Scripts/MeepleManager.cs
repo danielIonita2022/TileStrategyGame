@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Assets.Scripts
@@ -18,7 +19,7 @@ namespace Assets.Scripts
         [SerializeField] private BoardManager boardManager;
 
         // Dictionary to map Tile and Feature to Meeple
-        private Dictionary<TileFeatureKey, Meeple> tileFeatureMeepleMap = new Dictionary<TileFeatureKey, Meeple>();
+        private Dictionary<TileFeatureKey, MeepleData> tileFeatureMeepleMap = new Dictionary<TileFeatureKey, MeepleData>();
 
         void Awake()
         {
@@ -45,7 +46,7 @@ namespace Assets.Scripts
         /// <param name="featureIndex">The unique index of the feature on the tile.</param>
         /// <param name="meepleType">The type of meeple to place.</param>
         /// <returns>True if placement is successful; otherwise, false.</returns>
-        public bool PlaceMeeple(Tile tile, FeatureType featureType, int featureIndex, MeepleType meepleType)
+        public MeepleData PlaceMeeple(Tile tile, FeatureType featureType, int featureIndex)
         {
             TileFeatureKey key = new TileFeatureKey(tile, featureType, featureIndex);
 
@@ -53,26 +54,19 @@ namespace Assets.Scripts
             if (tileFeatureMeepleMap.ContainsKey(key))
             {
                 Debug.LogWarning($"Feature {featureType}#{featureIndex} on Tile at {tile.GridPosition} is already occupied.");
-                return false;
-            }
-
-            // Check if placement is valid according to game rules
-            if (!CanPlaceMeeple(tile, featureType, featureIndex))
-            {
-                Debug.LogWarning($"Cannot place meeple on Feature {featureType}#{featureIndex} of Tile at {tile.GridPosition}.");
-                return false;
+                return null;
             }
 
             MeepleType convertedMeepleType = Converters.ConvertFeatureTypeToMeepleType(featureType);
-            Meeple meeple = new Meeple(PlayerColor.RED, convertedMeepleType);
-            if (meeple == null)
+            MeepleData meepleData = new MeepleData(PlayerColor.GRAY, convertedMeepleType);
+            if (meepleData == null)
             {
                 Debug.LogError($"No available meeples of type {convertedMeepleType}.");
-                return false;
+                return null;
             }
 
             // Register the association
-            tileFeatureMeepleMap[key] = meeple;
+            tileFeatureMeepleMap[key] = meepleData;
 
             Debug.Log($"Placed {convertedMeepleType} meeple on {featureType}#{featureIndex} of Tile at {tile.GridPosition}.");
 
@@ -82,13 +76,20 @@ namespace Assets.Scripts
                 //HandleFeatureCompletion(tile, featureType, featureIndex);
             }
 
-            return true;
+            return meepleData;
+        }
+
+        public void RemoveMeeple(MeepleData meepleData)
+        {
+            tileFeatureMeepleMap.ContainsValue(meepleData);
+            TileFeatureKey key = tileFeatureMeepleMap.FirstOrDefault(x => x.Value == meepleData).Key;
+            tileFeatureMeepleMap.Remove(key);
         }
 
         /// <summary>
         /// Determines if a meeple can be placed on the specified feature according to game rules.
         /// </summary>
-        private bool CanPlaceMeeple(Tile tile, FeatureType featureType, int featureIndex)
+        public bool CanPlaceMeeple(Tile tile, FeatureType featureType, int featureIndex)
         {
             // Implement your game-specific rules here
             // Example Rules:
@@ -97,21 +98,24 @@ namespace Assets.Scripts
             // 3. Connected features do not have meeples.
 
             // Rule 1: Eligibility
-            if (featureType != FeatureType.CITY &&
-                featureType != FeatureType.ROAD &&
-                featureType != FeatureType.MONASTERY)
+            if (((featureType & FeatureType.CITY) != FeatureType.CITY )&&
+                ((featureType & FeatureType.ROAD) != FeatureType.ROAD) &&
+                ((featureType & FeatureType.MONASTERY) != FeatureType.MONASTERY))
             {
                 return false;
             }
 
-            // Rule 2: Occupied Check is already done in PlaceMeeple
+            if ((featureType & FeatureType.MONASTERY) != FeatureType.MONASTERY && featureIndex == 0)
+            {
+                return false;
+            }
 
             // Rule 3: Connected Features Check
-            List<Meeple> connectedMeeples = GetConnectedMeeples(tile, featureType, featureIndex);
-            foreach (var connectedMeeple in connectedMeeples)
+            Dictionary<TileFeatureKey, MeepleData> connectedMeeples = GetConnectedMeeples(tile, featureType, featureIndex);
+
+            if (connectedMeeples.Count() > 0)
             {
-                if (connectedMeeple != null)
-                    return false;
+                return false;
             }
 
             return true;
@@ -120,25 +124,25 @@ namespace Assets.Scripts
         /// <summary>
         /// Retrieves all meeples connected to the specified feature.
         /// </summary>
-        private List<Meeple> GetConnectedMeeples(Tile tile, FeatureType featureType, int featureIndex)
+        private Dictionary<TileFeatureKey, MeepleData> GetConnectedMeeples(Tile tile, FeatureType featureType, int featureIndex)
         {
-            List<Meeple> connectedMeeples = new List<Meeple>();
-
             // Implement logic to traverse connected features and collect meeples
             // This may involve querying adjacent tiles and their features
 
-            // Placeholder Implementation:
-            // Assuming you have a method to get connected tiles and features
-            List<TileFeatureKey> connectedKeys = boardManager.GetConnectedFeatureKeys(tile, featureType, featureIndex);
+            Dictionary<TileFeatureKey, MeepleData> connectedMeeples = new Dictionary<TileFeatureKey, MeepleData>();
+            HashSet<TileFeatureKey> connectedKeys = boardManager.GetConnectedFeatureKeys(tile, featureType, featureIndex);
 
             foreach (var key in connectedKeys)
             {
-                if (tileFeatureMeepleMap.TryGetValue(key, out Meeple meeple))
+                if (tileFeatureMeepleMap.TryGetValue(key, out MeepleData meepleData))
                 {
-                    connectedMeeples.Add(meeple);
+                    connectedMeeples.Add(key, meepleData);
+                }
+                else
+                {
+                    Debug.LogWarning($"No meeple found on connected feature {key.featureType}#{key.featureIndex} of Tile at {key.tile.GridPosition}.");
                 }
             }
-
             return connectedMeeples;
         }
 
@@ -147,8 +151,10 @@ namespace Assets.Scripts
         /// </summary>
         private bool IsFeatureComplete(Tile tile, FeatureType featureType, int featureIndex)
         {
+            return true; //placeholder
             return boardManager.IsFeatureComplete(tile, featureType, featureIndex);
         }
 
+        
     }
 }

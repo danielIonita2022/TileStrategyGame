@@ -27,7 +27,6 @@ namespace Assets.Scripts
         private int currentTileCount = 0;
 
         public event Action OnNoMoreTilePlacements;
-        public event Action<Tile> OnTilePlaced;
         public event Action<Sprite> OnPreviewImageUpdate;
         public event Action<HighlightTile> OnHighlightTileCreated;
 
@@ -282,30 +281,31 @@ namespace Assets.Scripts
         /// <summary>
         /// Places a tile at the specified position. If isStarter is true, uses starterTileData.
         /// </summary>
-        public bool PlaceTile(Vector2Int position, int rotationState, GameObject highlightTile = null, bool isStarter = false)
+        public Tile PlaceTile(Vector2Int position, int rotationState, GameObject highlightTile = null, bool isStarter = false)
         {
+            Tile newTile = null;
             if (currentTileCount >= maxTiles)
             {
                 Debug.Log("BoardManager: Maximum tile count reached. No more tiles can be placed.");
                 OnNoMoreTilePlacements?.Invoke();
-                return false;
+                return null;
             }
 
             // Ensure the position is within bounds and not already occupied
             if (placedTiles.ContainsKey(position))
             {
                 Debug.LogWarning($"BoardManager: Cannot place tile at {position} - Position already occupied.");
-                return false;
+                return null;
             }
 
             // Instantiate the tile prefab
             GameObject newTileObj = Instantiate(tilePrefab, new Vector3(position.x, position.y, 0), Quaternion.identity);
-            Tile newTile = newTileObj.GetComponent<Tile>();
+            newTile = newTileObj.GetComponent<Tile>();
             if (newTile == null)
             {
                 Debug.LogError("BoardManager: Tile component not found on instantiated tile.");
                 Destroy(newTileObj);
-                return false;
+                return null;
             }
 
             // Assign the grid position
@@ -319,7 +319,7 @@ namespace Assets.Scripts
                 {
                     Debug.LogError($"BoardManager: No TileData assigned for tile at position: {position}");
                     Destroy(newTileObj);
-                    return false;
+                    return null;
                 }
                 newTile.AssignFeatures();
 
@@ -365,7 +365,7 @@ namespace Assets.Scripts
                         {
                             Debug.LogWarning($"BoardManager: Cannot place tile at {position}: Feature mismatch on {directions[i]} side.");
                             Destroy(newTileObj);
-                            return false;
+                            return null;
                         }
                     }
                 }
@@ -381,8 +381,6 @@ namespace Assets.Scripts
                 {
                     Debug.LogWarning("BoardManager: Attempted to destroy a null highlight tile.");
                 }
-
-                OnTilePlaced?.Invoke(newTile);
             }
             else
             {
@@ -393,15 +391,14 @@ namespace Assets.Scripts
                 placedTiles.Add(position, newTileObj);
                 currentTileCount++;
                 HighlightAvailablePositions();
-                return true;
+                return null;
             }
 
             placedTiles.Add(position, newTileObj);
             currentTileCount++;
             Debug.Log($"Tile placed at {position}. Current tile count: {currentTileCount}");
 
-            // After placing a tile, draw the next one and update highlights
-            return true;
+            return newTile;
         }
 
         /// <summary>
@@ -585,7 +582,7 @@ namespace Assets.Scripts
             TileFeatureKey startingKey = new TileFeatureKey(tile, FeatureType.ROAD, featureIndex);
             bool isClosed = false;
 
-            List<TileFeatureKey> connectedRoads = GetConnectedFeatureKeys(tile, FeatureType.ROAD, featureIndex);
+            HashSet<TileFeatureKey> connectedRoads = GetConnectedFeatureKeys(tile, FeatureType.ROAD, featureIndex);
             int countEnds = 0;
             foreach (var roadKey in connectedRoads)
             {
@@ -610,18 +607,18 @@ namespace Assets.Scripts
         /// <summary>
         /// Retrieves the connected feature keys for a given feature.
         /// </summary>
-        public List<TileFeatureKey> GetConnectedFeatureKeys(Tile tile, FeatureType featureType, int featureIndex)
+        public HashSet<TileFeatureKey> GetConnectedFeatureKeys(Tile tile, FeatureType featureType, int featureIndex)
         {
-            List<TileFeatureKey> connectedKeys = new List<TileFeatureKey>();
+            HashSet<TileFeatureKey> connectedKeys = new HashSet<TileFeatureKey>();
             HashSet<TileFeatureKey> visitedKeys = new HashSet<TileFeatureKey>();
             TileFeatureKey currentKey = new TileFeatureKey(tile, featureType, featureIndex);
 
-            TraverseConnectedFeatures(currentKey, visitedKeys, connectedKeys);
+            TraverseConnectedFeatures(currentKey, visitedKeys, connectedKeys, featureType);
 
             return connectedKeys;
         }
 
-        private void TraverseConnectedFeatures(TileFeatureKey currentKey, HashSet<TileFeatureKey> visitedKeys, List<TileFeatureKey> connectedKeys)
+        private void TraverseConnectedFeatures(TileFeatureKey currentKey, HashSet<TileFeatureKey> visitedKeys, HashSet<TileFeatureKey> connectedKeys, FeatureType featureType)
         {
             if (visitedKeys.Contains(currentKey))
                 return;
@@ -631,53 +628,64 @@ namespace Assets.Scripts
 
             int currentFeatureIndex = currentKey.featureIndex;
             Tile currentTile = currentKey.tile;
-            FeatureType currentFeatureType = currentKey.featureType;
+            //FeatureType currentFeatureType = currentKey.featureType;
 
             // Check for multiple adjacent features on the same tile
-            for (int i = 1; i <= 4; i++)
+            if (currentFeatureIndex != 0)
             {
-                if (i == currentFeatureIndex)
-                    continue;
-
-                FeatureType adjacentFeatures = currentTile.GetFeature(i);
-                if ((adjacentFeatures & currentFeatureType) != 0) // Check if any of the features match
+                FeatureType centerFeatureType = currentTile.GetFeature(0);
+                if ((centerFeatureType & featureType) != 0) // Check if any of the features match
                 {
-                    TraverseConnectedFeatures(currentKey, visitedKeys, connectedKeys);
+                    TileFeatureKey newTileFeatureKey = new TileFeatureKey(currentTile, centerFeatureType, 0);
+                    TraverseConnectedFeatures(newTileFeatureKey, visitedKeys, connectedKeys, featureType);
+                }
+            }
+            else
+            {
+                for (int i = 1; i <= 4; i++)
+                {
+                    if (i == currentFeatureIndex)
+                        continue;
+
+                    FeatureType adjacentFeature = currentTile.GetFeature(i);
+                    if ((adjacentFeature & featureType) != 0) // Check if any of the features match
+                    {
+                        TileFeatureKey newTileFeatureKey = new TileFeatureKey(currentTile, adjacentFeature, i);
+                        TraverseConnectedFeatures(newTileFeatureKey, visitedKeys, connectedKeys, featureType);
+                    }
                 }
             }
 
-            // Check all four directions for connected features
-            for (int i = 1; i <= 4; i++)
+            // Check adjacent tile that corresponds with the current feature
+            Vector2Int direction = Vector2Int.zero;
+            switch (currentFeatureIndex)
             {
-                Vector2Int direction = Vector2Int.zero;
-                switch (i)
-                {
-                    case 1:
-                        direction = Vector2Int.up;
-                        break;
-                    case 2:
-                        direction = Vector2Int.right;
-                        break;
-                    case 3:
-                        direction = Vector2Int.down;
-                        break;
-                    case 4:
-                        direction = Vector2Int.left;
-                        break;
-                }
+                case 1:
+                    direction = Vector2Int.up;
+                    break;
+                case 2:
+                    direction = Vector2Int.right;
+                    break;
+                case 3:
+                    direction = Vector2Int.down;
+                    break;
+                case 4:
+                    direction = Vector2Int.left;
+                    break;
+            }
 
-                Vector2Int adjacentPos = currentTile.GridPosition + direction * 8;
-                Tile adjacentTile = GetTileAtPosition(adjacentPos);
-                if (adjacentTile != null)
+            Vector2Int adjacentPos = currentTile.GridPosition + direction * 8;
+            Tile adjacentTile = GetTileAtPosition(adjacentPos);
+            if (adjacentTile != null)
+            {
+                int adjacentFeatureIndex = Converters.ConvertDirectionToEdgeIndex(direction);
+                if (adjacentFeatureIndex > 0)
                 {
-                    int adjacentFeatureIndex = Converters.ConvertDirectionToEdgeIndex(direction);
-                    if (adjacentFeatureIndex > 0)
+                    FeatureType adjacentFeature = adjacentTile.GetFeature(adjacentFeatureIndex);
+                    if ((adjacentFeature & featureType) != 0) // Check if any of the features match
                     {
-                        FeatureType adjacentFeatures = adjacentTile.GetFeature(adjacentFeatureIndex);
-                        if ((adjacentFeatures & currentFeatureType) != 0) // Check if any of the features match
-                        {
-                            TraverseConnectedFeatures(currentKey, visitedKeys, connectedKeys);
-                        }
+                        TileFeatureKey newTileFeatureKey = new TileFeatureKey(adjacentTile, adjacentFeature, adjacentFeatureIndex);
+                        TraverseConnectedFeatures(newTileFeatureKey, visitedKeys, connectedKeys, featureType);
                     }
                 }
             }

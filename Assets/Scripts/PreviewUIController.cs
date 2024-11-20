@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.AdaptivePerformance.Provider;
 using UnityEngine.UIElements;
 
 namespace Assets.Scripts
@@ -13,6 +16,13 @@ namespace Assets.Scripts
 
         private int previewRotationState = 0; // 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°
         private float[] rotationAngles = { 0f, 90f, 180f, 270f };
+
+        [SerializeField] private GameObject meeplePrefab;
+        [SerializeField] private Transform meepleParent; // Parent transform for instantiating meeples
+
+        private List<Meeple> instantiatedGrayMeeples = new List<Meeple>();
+
+        public List<Meeple> InstantiatedGrayMeeples => instantiatedGrayMeeples;
 
         private void OnEnable()
         {
@@ -51,6 +61,91 @@ namespace Assets.Scripts
             if (rotateRightButton != null)
                 rotateRightButton.clicked -= RotateRight;
         }
+
+        public static Vector3 GetOffset(int edgeIndex, float tileSize = 8f, float meepleOffset = 0.0f)
+        {
+            Vector3 offset = Vector3.zero;
+            switch (edgeIndex)
+            {
+                case 0:
+                    offset = Vector3.zero;
+                    break;
+                case 1: // North
+                    offset = new Vector3(0, tileSize / 2 + meepleOffset, 0);
+                    break;
+                case 2: // East
+                    offset = new Vector3(tileSize / 2 + meepleOffset, 0, 0);
+                    break;
+                case 3: // South
+                    offset = new Vector3(0, -tileSize / 2 - meepleOffset, 0);
+                    break;
+                case 4: // West
+                    offset = new Vector3(-tileSize / 2 - meepleOffset, 0, 0);
+                    break;
+                default:
+                    Debug.LogError("Invalid edge index.");
+                    break;
+            }
+            return offset;
+        }
+
+        /// <summary>
+        /// Displays meeple options based on available features.
+        /// </summary>
+        public void DisplayMeepleOptions(Vector3 tileWorldPosition, List<(FeatureType, int, MeepleData)> availableFeaturesForMeeples)
+        {
+            ClearMeepleOptions();
+
+            foreach (var featureAndEdgeIndexAndMeepleData in availableFeaturesForMeeples)
+            {
+                FeatureType feature = featureAndEdgeIndexAndMeepleData.Item1;
+                int edgeIndex = featureAndEdgeIndexAndMeepleData.Item2;
+                MeepleData meepleData = featureAndEdgeIndexAndMeepleData.Item3;
+                Vector3 offset = GetOffset(edgeIndex);
+                Vector3 meeplePosition = tileWorldPosition + offset;
+                // Instantiate the single meeple prefab
+                GameObject meepleGO = Instantiate(meeplePrefab, meepleParent);
+                meepleGO.transform.position = meeplePosition;
+                Meeple meeple = meepleGO.GetComponent<Meeple>();
+                if (meeple != null)
+                {
+                    MeepleType meepleType = Converters.ConvertFeatureTypeToMeepleType(feature);
+                    meeple.UpdateMeepleVisual(meepleType, PlayerColor.GRAY);
+                    meeple.MeepleData = meepleData;
+                    instantiatedGrayMeeples.Add(meeple);
+                    Debug.Log($"PreviewUIController: Meeple position: {meeplePosition}.");
+                }
+                else
+                {
+                    Debug.LogError("PreviewUIController: MeeplePrefab does not have a Meeple script attached.");
+                }
+            }
+
+            // Optionally, make the meeple options panel visible
+            meepleParent.gameObject.SetActive(true);
+        }
+
+        public void RemoveUIMeeple(Meeple grayMeeple)
+        {
+            instantiatedGrayMeeples.Remove(grayMeeple);
+        }
+
+        /// <summary>
+        /// Clears all current meeple options.
+        /// </summary>
+        public void ClearMeepleOptions()
+        {
+            foreach (var meeple in instantiatedGrayMeeples)
+            {
+                if (meeple != null)
+                {
+                    meeple.SpriteRenderer = null;
+                    Destroy(meeple.gameObject);
+                }
+            }
+            instantiatedGrayMeeples.Clear();
+        }
+
 
         /// <summary>
         /// Updates the preview image with the selected tile's sprite.
@@ -155,5 +250,6 @@ namespace Assets.Scripts
 
             Debug.Log("Rotation controls enabled.");
         }
+
     }
 }
