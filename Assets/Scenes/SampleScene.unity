@@ -175,6 +175,11 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 4150271876275087771, guid: 25a7455e0dd3e9f43b5c176b621dfbdb, type: 3}
   m_PrefabInstance: {fileID: 1092916897119685325}
   m_PrefabAsset: {fileID: 0}
+--- !u!212 &416770731 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 5213442778941968756, guid: 25a7455e0dd3e9f43b5c176b621dfbdb, type: 3}
+  m_PrefabInstance: {fileID: 1092916897119685325}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -186,6 +191,7 @@ GameObject:
   - component: {fileID: 519420032}
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
+  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -267,6 +273,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd47ad6cd392b1442971083e37fe2ecc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cam: {fileID: 519420031}
+  zoomStep: 0.1
+  minCamSize: 2
+  maxCamSize: 50
+  mapRenderer: {fileID: 416770731}
 --- !u!1 &1295139410
 GameObject:
   m_ObjectHideFlags: 0
