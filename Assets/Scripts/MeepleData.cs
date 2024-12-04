@@ -14,11 +14,15 @@ namespace Assets.Scripts
     }
     public class MeepleData
     {
+        private int _meepleID;
         private MeepleType _meepleType;
         private PlayerColor _playerColor;
 
-        public MeepleData(PlayerColor color, MeepleType type)
+        public int MeepleID => _meepleID;
+
+        public MeepleData(PlayerColor color, MeepleType type, int meepleID)
         {
+            _meepleID = meepleID;
             _playerColor = color;
             _meepleType = type;
         }

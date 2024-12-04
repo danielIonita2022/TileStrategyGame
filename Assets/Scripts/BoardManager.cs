@@ -1,10 +1,6 @@
-using Assets.Scripts;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using TreeEditor;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 namespace Assets.Scripts
 {
@@ -541,13 +537,38 @@ namespace Assets.Scripts
 
         public bool IsFeatureComplete(Tile tile, FeatureType featureType, int featureIndex)
         {
-            return featureType switch
+            if ((featureType & FeatureType.MONASTERY) == FeatureType.MONASTERY)
+                return IsMonasteryComplete(tile, featureIndex);
+            if ((featureType & FeatureType.CITY) == FeatureType.CITY)
+                return IsCityComplete(tile, featureIndex);
+            if ((featureType & FeatureType.ROAD) == FeatureType.ROAD)
+                return IsRoadComplete(tile, featureIndex);
+            throw new Exception("Feature type not recognized.");
+        }
+
+        private bool IsCityComplete(Tile tile, int featureIndex)
+        {
+            TileFeatureKey startingKey = new TileFeatureKey(tile, FeatureType.CITY, featureIndex);
+            HashSet<TileFeatureKey> connectedCity = GetConnectedFeatureKeys(tile, FeatureType.CITY, featureIndex);
+            foreach (var cityKey in connectedCity)
             {
-                FeatureType.CITY => IsRoadComplete(tile, featureIndex),
-                FeatureType.ROAD => IsRoadComplete(tile, featureIndex),
-                FeatureType.MONASTERY => IsMonasteryComplete(tile, featureIndex),
-                _ => throw new ArgumentException("Invalid feature!"),
-            };
+                int currentFeatureIndex = cityKey.featureIndex;
+                Vector2Int currentTilePos = cityKey.tile.GridPosition;
+                Vector2Int adjacentPos = currentTilePos + Converters.ConvertEdgeIndexToDirection(currentFeatureIndex) * 8;
+                if (placedTiles.ContainsKey(adjacentPos))
+                {
+                    Tile adjacentTile = placedTiles[adjacentPos].GetComponent<Tile>();
+                    if (adjacentTile == null || adjacentTile.tileData == null)
+                    {
+                        throw new Exception("Position is occupied but the tile itself is not present on the board!");
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private bool IsMonasteryComplete(Tile tile, int featureIndex)
@@ -602,6 +623,20 @@ namespace Assets.Scripts
                 throw new ArgumentException("Road cannot have more than 2 ends.");
             }
             return isClosed;
+        }
+
+        /// <summary>
+        /// Retrieves the connected tiles for a given tile and feature.
+        /// </summary>
+        public HashSet<Tile> GetConnectedTiles(Tile tile, FeatureType featureType, int featureIndex)
+        {
+            HashSet<Tile> connectedTiles = new HashSet<Tile>();
+            HashSet<TileFeatureKey> connectedKeys = GetConnectedFeatureKeys(tile, featureType, featureIndex);
+            foreach (var key in connectedKeys)
+            {
+                connectedTiles.Add(key.tile);
+            }
+            return connectedTiles;
         }
 
         /// <summary>

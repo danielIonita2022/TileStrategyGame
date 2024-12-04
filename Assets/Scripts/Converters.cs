@@ -21,6 +21,18 @@ namespace Assets.Scripts
                 throw new ArgumentException($"Invalid FeatureType {type}", nameof(type));
         }
 
+        public static FeatureType ConvertMeepleTypeToFeatureType(MeepleType type)
+        {
+            if (type == MeepleType.Road)
+                return FeatureType.ROAD;
+            else if (type == MeepleType.Knight)
+                return FeatureType.CITY;
+            else if (type == MeepleType.Bishop)
+                return FeatureType.MONASTERY;
+            else
+                throw new ArgumentException($"Invalid MeepleType {type}", nameof(type));
+        }
+
         public static int ConvertDirectionToEdgeIndex(Vector2Int direction)
         {
             if (direction == Vector2Int.zero)
@@ -35,6 +47,25 @@ namespace Assets.Scripts
                 return 2;
 
             throw new ArgumentException("Invalid direction", nameof(direction));
+        }
+
+        public static Vector2Int ConvertEdgeIndexToDirection(int edgeIndex)
+        {
+            switch (edgeIndex)
+            {
+                case 0:
+                    return Vector2Int.zero;
+                case 1:
+                    return Vector2Int.up;
+                case 2:
+                    return Vector2Int.right;
+                case 3:
+                    return Vector2Int.down;
+                case 4:
+                    return Vector2Int.left;
+                default:
+                    throw new ArgumentException("Invalid edge index", nameof(edgeIndex));
+            }
         }
 
         public static string ConvertPlayerColorToString(PlayerColor color)

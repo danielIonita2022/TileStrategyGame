@@ -21,8 +21,10 @@ namespace Assets.Scripts
         [SerializeField] private Transform meepleParent; // Parent transform for instantiating meeples
 
         private List<Meeple> instantiatedGrayMeeples = new List<Meeple>();
+        private List<Meeple> instantiatedPlayerMeeples = new List<Meeple>();
 
         public List<Meeple> InstantiatedGrayMeeples => instantiatedGrayMeeples;
+        public List<Meeple> InstantiatedPlayerMeeples => instantiatedPlayerMeeples;
 
         private void OnEnable()
         {
@@ -125,9 +127,25 @@ namespace Assets.Scripts
             meepleParent.gameObject.SetActive(true);
         }
 
-        public void RemoveUIMeeple(Meeple grayMeeple)
+        public void AddInstantiatedPlayerMeeple(Meeple meeple)
         {
-            instantiatedGrayMeeples.Remove(grayMeeple);
+            InstantiatedPlayerMeeples.Add(meeple);
+        }
+
+        public void RemoveUIMeeple(int meepleID)
+        {
+            Meeple meepleToRemove = InstantiatedPlayerMeeples.Find(meeple => meeple.MeepleData.MeepleID == meepleID);
+            if (meepleToRemove != null)
+            {
+                meepleToRemove.SpriteRenderer = null;
+                Destroy(meepleToRemove.gameObject);
+            }
+        }
+
+        public void RemoveUIMeeple(Meeple meeple)
+        {
+            InstantiatedGrayMeeples.Remove(meeple);
+            InstantiatedPlayerMeeples.Remove(meeple);
         }
 
         /// <summary>

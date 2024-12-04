@@ -11,6 +11,8 @@ namespace Assets.Scripts
     {
         public string PlayerName { get; private set; }
         public PlayerColor PlayerColor { get; private set; }
+        public int Score { get; set; }
+        public int MeepleCount { get; set; }
         public int PlayerID { get; private set; } // Unique identifier
 
 
@@ -19,6 +21,8 @@ namespace Assets.Scripts
             PlayerName = name;
             PlayerColor = color;
             PlayerID = id;
+            Score = 0;
+            MeepleCount = 6;
         }
 
     }

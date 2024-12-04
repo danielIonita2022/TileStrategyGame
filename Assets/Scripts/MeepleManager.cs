@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
+using Random = System.Random;
 
 namespace Assets.Scripts
 {
@@ -20,6 +22,11 @@ namespace Assets.Scripts
 
         // Dictionary to map Tile and Feature to Meeple
         private Dictionary<TileFeatureKey, MeepleData> tileFeatureMeepleMap = new Dictionary<TileFeatureKey, MeepleData>();
+
+        public Dictionary<TileFeatureKey, MeepleData> TileFeatureMeepleMap => tileFeatureMeepleMap;
+
+        private static HashSet<int> _usedMeepleIDs = new HashSet<int>();
+        private static Random _random = new Random();
 
         void Awake()
         {
@@ -38,6 +45,17 @@ namespace Assets.Scripts
             boardManager = BoardManager.Instance;
         }
 
+        private int GenerateUniqueID()
+        {
+            int newID;
+            do
+            {
+                newID = _random.Next(1, 1000000);
+            } while (_usedMeepleIDs.Contains(newID));
+            _usedMeepleIDs.Add(newID);
+            return newID;
+        }
+
         /// <summary>
         /// Attempts to place a meeple on a specific feature of a tile.
         /// </summary>
@@ -53,12 +71,13 @@ namespace Assets.Scripts
             // Check if the feature is already occupied
             if (tileFeatureMeepleMap.ContainsKey(key))
             {
-                Debug.LogWarning($"Feature {featureType}#{featureIndex} on Tile at {tile.GridPosition} is already occupied.");
+                Debug.Log($"Feature {featureType}#{featureIndex} on Tile at {tile.GridPosition} is already occupied.");
                 return null;
             }
 
             MeepleType convertedMeepleType = Converters.ConvertFeatureTypeToMeepleType(featureType);
-            MeepleData meepleData = new MeepleData(PlayerColor.GRAY, convertedMeepleType);
+            int meepleID = GenerateUniqueID();
+            MeepleData meepleData = new MeepleData(PlayerColor.GRAY, convertedMeepleType, meepleID);
             if (meepleData == null)
             {
                 Debug.LogError($"No available meeples of type {convertedMeepleType}.");
@@ -69,12 +88,6 @@ namespace Assets.Scripts
             tileFeatureMeepleMap[key] = meepleData;
 
             Debug.Log($"Placed {convertedMeepleType} meeple on {featureType}#{featureIndex} of Tile at {tile.GridPosition}.");
-
-            // Check for feature completion
-            if (IsFeatureComplete(tile, featureType, featureIndex))
-            {
-                //HandleFeatureCompletion(tile, featureType, featureIndex);
-            }
 
             return meepleData;
         }
@@ -140,21 +153,11 @@ namespace Assets.Scripts
                 }
                 else
                 {
-                    Debug.LogWarning($"No meeple found on connected feature {key.featureType}#{key.featureIndex} of Tile at {key.tile.GridPosition}.");
+                    Debug.Log($"No meeple found on connected feature {key.featureType}#{key.featureIndex} of Tile at {key.tile.GridPosition}.");
                 }
             }
             return connectedMeeples;
         }
-
-        /// <summary>
-        /// Determines if a feature is complete based on game rules.
-        /// </summary>
-        private bool IsFeatureComplete(Tile tile, FeatureType featureType, int featureIndex)
-        {
-            return true; //placeholder
-            return boardManager.IsFeatureComplete(tile, featureType, featureIndex);
-        }
-
         
     }
 }

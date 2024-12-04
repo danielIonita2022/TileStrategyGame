@@ -18,7 +18,7 @@ namespace Assets.Scripts
 
         private void Awake()
         {
-            MeepleData = new MeepleData(PlayerColor.GRAY, MeepleType.Road);
+            MeepleData = new MeepleData(PlayerColor.GRAY, MeepleType.Road, -1);
             SpriteRenderer = GetComponent<SpriteRenderer>();
         }
 

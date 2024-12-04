@@ -1,11 +1,6 @@
-﻿using Assets.Scripts;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using TreeEditor;
 using UnityEngine;
-using UnityEngine.Tilemaps;
-using UnityEngine.WSA;
 
 namespace Assets.Scripts
 {
@@ -39,7 +34,7 @@ namespace Assets.Scripts
         {
             // Example initialization. Replace with dynamic player setup if needed.
             players.Add(new Player("Alice", PlayerColor.RED, 1));
-            //players.Add(new Player("Bob", PlayerColor.BLUE, 2));
+            players.Add(new Player("Bob", PlayerColor.YELLOW, 2));
         }
 
         /// <summary>
@@ -65,6 +60,10 @@ namespace Assets.Scripts
         private void EndGame()
         {
             Debug.Log("GameManager: Ending the game.");
+            foreach(Player player in players)
+            {
+                Debug.Log($"GameManager: Player {player.PlayerName} scored {player.Score} points.");
+            }
             // Implement your end-of-game logic here
             // Example: Display end-game UI, calculate scores, determine winner, etc.
             //uiManager.DisplayEndGameScreen(players);
@@ -91,6 +90,14 @@ namespace Assets.Scripts
         {
             currentPlayer = player;
             currentTile = placedTile;
+
+            if (currentPlayer.MeepleCount == 0)
+            {
+                Debug.Log($"GameManager: Player {currentPlayer.PlayerName} has no meeples left to place.");
+                CalculateCompletedFeatures();
+                SwitchTurn();
+                return;
+            }
 
             List<(FeatureType, int)> featuresAndEdgeIndexes = placedTile.GetAllFeatures();
             List<(FeatureType, int, MeepleData)> availableFeaturesForMeeples = new List<(FeatureType, int, MeepleData)>();
@@ -125,32 +132,91 @@ namespace Assets.Scripts
             else
             {
                 Debug.Log("GameManager: No meeple placement options available.");
+                CalculateCompletedFeatures();
                 SwitchTurn();
             }
         }
 
-        private void OnMeepleSelected(Meeple grayMeeple)
+        private void OnMeepleSelected(Meeple selectedMeeple)
         {
             PlayerColor playerColor = currentPlayer.PlayerColor;
-            MeepleData grayMeepleData = grayMeeple.MeepleData;
-            if (grayMeepleData == null)
+            MeepleData selectedMeepleData = selectedMeeple.MeepleData;
+            if (selectedMeepleData == null)
             {
                 Debug.LogError("GameManager: MeepleData is null.");
                 return;
             }
-            MeepleType meepleType = grayMeepleData.GetMeepleType();
-            grayMeepleData.SetPlayerColor(playerColor);
-            grayMeepleData.SetMeepleType(meepleType);
-            grayMeeple.UpdateMeepleVisual(meepleType, playerColor);
-            previewUIController.RemoveUIMeeple(grayMeeple);
-            grayMeeple.OnGrayMeepleClicked -= OnMeepleSelected;
+            MeepleType meepleType = selectedMeepleData.GetMeepleType();
+            selectedMeepleData.SetPlayerColor(playerColor);
+            selectedMeepleData.SetMeepleType(meepleType);
+            selectedMeeple.UpdateMeepleVisual(meepleType, playerColor);
+            selectedMeeple.OnGrayMeepleClicked -= OnMeepleSelected;
+            previewUIController.RemoveUIMeeple(selectedMeeple);
             foreach (var meeple in previewUIController.InstantiatedGrayMeeples)
             {
                 meeple.OnGrayMeepleClicked -= OnMeepleSelected;
                 meepleManager.RemoveMeeple(meeple.MeepleData);
             }
             previewUIController.ClearMeepleOptions();
+            previewUIController.AddInstantiatedPlayerMeeple(selectedMeeple);
+            currentPlayer.MeepleCount--;
+
+            CalculateCompletedFeatures();
             SwitchTurn();
+        }
+
+
+        private void CalculateCompletedFeatures()
+        {
+            Dictionary<TileFeatureKey, MeepleData> tileFeatureMeepleMap = meepleManager.TileFeatureMeepleMap;
+            List<MeepleData> meeplesFlaggedForRemoval = new List<MeepleData>();
+            foreach (TileFeatureKey key in tileFeatureMeepleMap.Keys)
+            {
+                Tile tile = key.tile;
+                FeatureType featureType = key.featureType;
+                int featureIndex = key.featureIndex;
+                MeepleData meepleData = tileFeatureMeepleMap[key];
+                if (boardManager.IsFeatureComplete(tile, featureType, featureIndex))
+                {
+                    PlayerColor playerColor = meepleData.GetPlayerColor();
+                    int score = CalculateScore(tile, featureType, featureIndex);
+                    Player scoringPlayer = players.Find(p => p.PlayerColor == playerColor);
+                    scoringPlayer.Score += score;
+                    scoringPlayer.MeepleCount++;
+                    Debug.Log($"GameManager: Player {scoringPlayer.PlayerName} scored {score} points. TOTAL: {scoringPlayer.Score}");
+                    meeplesFlaggedForRemoval.Add(meepleData);
+                }
+            }
+            RemovePlayerMeeples(meeplesFlaggedForRemoval);
+        }
+        private void RemovePlayerMeeples(List<MeepleData> meeplesFlaggedForRemoval)
+        {
+            foreach (MeepleData meepleData in meeplesFlaggedForRemoval)
+            {
+                meepleManager.RemoveMeeple(meepleData);
+                previewUIController.RemoveUIMeeple(meepleData.MeepleID);
+            }
+        }
+
+        private int CalculateScore(Tile tile, FeatureType featureType, int featureIndex, bool endGame = false)
+        {
+            if ((featureType & FeatureType.MONASTERY) == FeatureType.MONASTERY)
+            {
+                return 9;
+            }
+            else if ((featureType & FeatureType.ROAD) == FeatureType.ROAD)
+            {
+                return boardManager.GetConnectedTiles(tile, featureType, featureIndex).Count;
+            }
+            else if ((featureType & FeatureType.CITY) == FeatureType.CITY)
+            {
+                if (endGame)
+                {
+                    return boardManager.GetConnectedTiles(tile, featureType, featureIndex).Count;
+                }
+                return boardManager.GetConnectedTiles(tile, featureType, featureIndex).Count * 2;
+            }
+            else throw new InvalidOperationException("Invalid feature type.");
         }
 
         private void DisableFurtherPlacement()
