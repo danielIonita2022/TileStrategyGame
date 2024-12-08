@@ -15,6 +15,8 @@ namespace Assets.Scripts
         private Player currentPlayer;
         private Tile currentTile;
 
+        private GameState gameState = GameState.Idle;
+
         void Awake()
         {
             InitializePlayers();
@@ -45,6 +47,8 @@ namespace Assets.Scripts
             currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
             Debug.Log($"GameManager: It's now {players[currentPlayerIndex].PlayerName}'s turn.");
 
+            gameState = GameState.Idle;
+
             boardManager.DrawNextTile();
             boardManager.HighlightAvailablePositions();
             previewUIController.EnableRotation();
@@ -59,6 +63,7 @@ namespace Assets.Scripts
         /// </summary>
         private void EndGame()
         {
+            gameState = GameState.Finished;
             Debug.Log("GameManager: Ending the game.");
             foreach(Player player in players)
             {
@@ -74,11 +79,16 @@ namespace Assets.Scripts
         /// </summary>
         public void OnTileSelected(Vector2Int position, GameObject highlightTile)
         {
+            if (gameState != GameState.Idle)
+            {
+                return;
+            }
             Debug.Log($"GameManager: Tile selected at position: {position}");
             int rotationState = previewUIController.GetPreviewRotationState();
             Tile placedTile = boardManager.PlaceTile(position, rotationState, highlightTile);
             if (placedTile != null)
             {
+                gameState = GameState.PlacingTile;
                 previewUIController.ResetPreviewRotationState();
                 previewUIController.HidePreview();
                 previewUIController.DisableRotation();
@@ -98,6 +108,8 @@ namespace Assets.Scripts
                 SwitchTurn();
                 return;
             }
+
+            gameState = GameState.PlacingMeeple;
 
             List<(FeatureType, int)> featuresAndEdgeIndexes = placedTile.GetAllFeatures();
             List<(FeatureType, int, MeepleData)> availableFeaturesForMeeples = new List<(FeatureType, int, MeepleData)>();
