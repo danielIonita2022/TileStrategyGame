@@ -18,3 +18,4 @@ MonoBehaviour:
   southEdge: 2
   westEdge: 1
   tileSprite: {fileID: 21300000, guid: 228affc779e63df47b81932cfba8a55b, type: 3}
+  count: 0

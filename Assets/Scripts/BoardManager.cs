@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Assets.Scripts
@@ -257,7 +258,7 @@ namespace Assets.Scripts
                 Debug.LogError($"Tile component not found on tile at {position}.");
                 return null;
             }
-            Debug.LogWarning($"No tile found at position: {position}");
+            //Debug.LogWarning($"No tile found at position: {position}");
             return null;
         }
 
@@ -601,28 +602,49 @@ namespace Assets.Scripts
         private bool IsRoadComplete(Tile tile, int featureIndex)
         {
             TileFeatureKey startingKey = new TileFeatureKey(tile, FeatureType.ROAD, featureIndex);
-            bool isClosed = false;
 
             HashSet<TileFeatureKey> connectedRoads = GetConnectedFeatureKeys(tile, FeatureType.ROAD, featureIndex);
-            int countEnds = 0;
+            //int countEnds = 0;
+            //foreach (var roadKey in connectedRoads)
+            //{
+            //    FeatureType featureType = roadKey.featureType;
+            //    if (((featureType & FeatureType.ROAD_END) == FeatureType.ROAD_END) ||
+            //        ((featureType & FeatureType.ROAD_INTERSECTION) == FeatureType.ROAD_INTERSECTION))
+            //    {
+            //        countEnds++;
+            //    }
+            //}
+            //if (countEnds == 2)
+            //{
+            //    return true;
+            //}
+            //else if (countEnds > 2)
+            //{
+            //    throw new ArgumentException("Road cannot have more than 2 ends.");
+            //}
+
             foreach (var roadKey in connectedRoads)
             {
-                FeatureType featureType = roadKey.featureType;
-                if (((featureType & FeatureType.ROAD_END) == FeatureType.ROAD_END) ||
-                    ((featureType & FeatureType.ROAD_INTERSECTION) == FeatureType.ROAD_INTERSECTION))
+                int currentFeatureIndex = roadKey.featureIndex;
+                Vector2Int currentTilePos = roadKey.tile.GridPosition;
+                Vector2Int adjacentPos = currentTilePos + Converters.ConvertEdgeIndexToDirection(currentFeatureIndex) * 8;
+                if (placedTiles.ContainsKey(adjacentPos))
                 {
-                    countEnds++;
+                    Tile adjacentTile = placedTiles[adjacentPos].GetComponent<Tile>();
+                    if (adjacentTile == null || adjacentTile.tileData == null)
+                    {
+                        throw new Exception("Position is occupied but the tile itself is not present on the board!");
+                    }
+                }
+                else
+                {
+                    return false;
                 }
             }
-            if (countEnds == 2)
-            {
-                isClosed = true;
-            }
-            else if (countEnds > 2)
-            {
-                throw new ArgumentException("Road cannot have more than 2 ends.");
-            }
-            return isClosed;
+            return true;
+
+
+            //ATENTIE: Nu iei in calcul daca drumul e bucla, de asemenea e problema cu tile-ul biserica cu drum, apare doar preotul si nici nu poti apasa pe el
         }
 
         /// <summary>
@@ -659,11 +681,14 @@ namespace Assets.Scripts
                 return;
 
             visitedKeys.Add(currentKey);
-            connectedKeys.Add(currentKey);
 
+            FeatureType currentfeatureType = currentKey.featureType;
+            if (((featureType & FeatureType.ROAD_END) == FeatureType.ROAD_END) || ((featureType & FeatureType.ROAD_INTERSECTION) == FeatureType.ROAD_INTERSECTION))
+                return;
+
+            connectedKeys.Add(currentKey);
             int currentFeatureIndex = currentKey.featureIndex;
             Tile currentTile = currentKey.tile;
-            //FeatureType currentFeatureType = currentKey.featureType;
 
             // Check for multiple adjacent features on the same tile
             if (currentFeatureIndex != 0)
@@ -692,22 +717,10 @@ namespace Assets.Scripts
             }
 
             // Check adjacent tile that corresponds with the current feature
-            Vector2Int direction = Vector2Int.zero;
-            switch (currentFeatureIndex)
-            {
-                case 1:
-                    direction = Vector2Int.up;
-                    break;
-                case 2:
-                    direction = Vector2Int.right;
-                    break;
-                case 3:
-                    direction = Vector2Int.down;
-                    break;
-                case 4:
-                    direction = Vector2Int.left;
-                    break;
-            }
+            if (currentFeatureIndex == 0)
+                return;
+
+            Vector2Int direction = Converters.ConvertEdgeIndexToDirection(currentFeatureIndex);
 
             Vector2Int adjacentPos = currentTile.GridPosition + direction * 8;
             Tile adjacentTile = GetTileAtPosition(adjacentPos);

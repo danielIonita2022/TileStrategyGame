@@ -11,14 +11,14 @@ namespace Assets.Scripts
     {
         public static MeepleType ConvertFeatureTypeToMeepleType(FeatureType type)
         {
-            if (type == FeatureType.ROAD)
-                return MeepleType.Road;
-            else if (type == FeatureType.CITY)
-                return MeepleType.Knight;
-            else if ((type & FeatureType.MONASTERY) == FeatureType.MONASTERY)
+            if (type.HasFlag(FeatureType.MONASTERY))
                 return MeepleType.Bishop;
-            else
-                throw new ArgumentException($"Invalid FeatureType {type}", nameof(type));
+            if (type.HasFlag(FeatureType.ROAD))
+                return MeepleType.Road;
+            if (type.HasFlag(FeatureType.CITY))
+                return MeepleType.Knight;
+           
+            throw new ArgumentException($"Invalid FeatureType {type}", nameof(type));
         }
 
         public static FeatureType ConvertMeepleTypeToFeatureType(MeepleType type)

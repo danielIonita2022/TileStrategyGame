@@ -14,15 +14,10 @@
         <!-- Rotation Buttons Container -->
         <engine:VisualElement class="rotation-buttons">
             
-            <!-- Rotate Left Button -->
-            <engine:Button name="RotateLeftButton" class="rotate-button">
-                <engine:Label text="Rotate Left" />
-            </engine:Button>
+            <engine:Button name="RotateLeftButton" class="rotate-button rotate-left-button" />
             
-            <!-- Rotate Right Button -->
-            <engine:Button name="RotateRightButton" class="rotate-button">
-                <engine:Label text="Rotate Right" />
-            </engine:Button>
+            <engine:Button name="RotateRightButton" class="rotate-button rotate-right-button" />
+        
         
         </engine:VisualElement>
     

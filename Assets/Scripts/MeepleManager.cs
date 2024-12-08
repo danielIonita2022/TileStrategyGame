@@ -153,7 +153,7 @@ namespace Assets.Scripts
                 }
                 else
                 {
-                    Debug.Log($"No meeple found on connected feature {key.featureType}#{key.featureIndex} of Tile at {key.tile.GridPosition}.");
+                    //Debug.Log($"No meeple found on connected feature {key.featureType}#{key.featureIndex} of Tile at {key.tile.GridPosition}.");
                 }
             }
             return connectedMeeples;
