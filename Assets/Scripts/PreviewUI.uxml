@@ -20,6 +20,8 @@
         
         
         </engine:VisualElement>
+
+        <engine:Button name="SkipMeeplePlacement" text="End Turn" />
     
     </engine:VisualElement>
 

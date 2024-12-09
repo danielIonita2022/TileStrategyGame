@@ -24,6 +24,7 @@ namespace Assets.Scripts
             boardManager.OnNoMoreTilePlacements += DisableFurtherPlacement;
             boardManager.OnHighlightTileCreated += HandleHighlightTileCreated;
             boardManager.OnPreviewImageUpdate += HandlePreviewImageUpdate;
+            previewUIController.OnMeepleSkipped += SkipTurn;
             meepleManager = MeepleManager.Instance;
         }
 
@@ -44,6 +45,7 @@ namespace Assets.Scripts
         /// </summary>
         private void SwitchTurn()
         {
+            CalculateCompletedFeatures();
             currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
             Debug.Log($"GameManager: It's now {players[currentPlayerIndex].PlayerName}'s turn.");
 
@@ -56,6 +58,19 @@ namespace Assets.Scripts
 
             // Update UI to reflect the current player's turn
             //uiManager.UpdateCurrentPlayer(players[currentPlayerIndex]);
+        }
+
+        private void SkipTurn()
+        {
+            Debug.Log($"GameManager: Player {players[currentPlayerIndex].PlayerName} skipped their turn.");
+            foreach (var meeple in previewUIController.InstantiatedGrayMeeples)
+            {
+                meeple.OnGrayMeepleClicked -= OnMeepleSelected;
+                meepleManager.RemoveMeeple(meeple.MeepleData);
+            }
+            previewUIController.ClearMeepleOptions();
+            previewUIController.HideEndTurnButton();
+            SwitchTurn();
         }
 
         /// <summary>
@@ -92,6 +107,7 @@ namespace Assets.Scripts
                 previewUIController.ResetPreviewRotationState();
                 previewUIController.HidePreview();
                 previewUIController.DisableRotation();
+                previewUIController.ShowEndTurnButton();
                 InitiateMeeplePlacement(players[currentPlayerIndex], placedTile);
             }
         }
@@ -104,12 +120,9 @@ namespace Assets.Scripts
             if (currentPlayer.MeepleCount == 0)
             {
                 Debug.Log($"GameManager: Player {currentPlayer.PlayerName} has no meeples left to place.");
-                CalculateCompletedFeatures();
                 SwitchTurn();
                 return;
             }
-
-            gameState = GameState.PlacingMeeple;
 
             List<(FeatureType, int)> featuresAndEdgeIndexes = placedTile.GetAllFeatures();
             List<(FeatureType, int, MeepleData)> availableFeaturesForMeeples = new List<(FeatureType, int, MeepleData)>();
@@ -136,6 +149,8 @@ namespace Assets.Scripts
 
                 List<Meeple> instantiatedGrayMeeples = previewUIController.InstantiatedGrayMeeples;
 
+                gameState = GameState.PlacingMeeple;
+
                 foreach (var grayMeeple in instantiatedGrayMeeples)
                 {
                     grayMeeple.OnGrayMeepleClicked += OnMeepleSelected;
@@ -144,7 +159,6 @@ namespace Assets.Scripts
             else
             {
                 Debug.Log("GameManager: No meeple placement options available.");
-                CalculateCompletedFeatures();
                 SwitchTurn();
             }
         }
@@ -173,7 +187,6 @@ namespace Assets.Scripts
             previewUIController.AddInstantiatedPlayerMeeple(selectedMeeple);
             currentPlayer.MeepleCount--;
 
-            CalculateCompletedFeatures();
             SwitchTurn();
         }
 

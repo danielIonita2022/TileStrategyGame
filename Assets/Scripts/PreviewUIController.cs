@@ -13,6 +13,7 @@ namespace Assets.Scripts
         private Image previewImage;
         private Button rotateLeftButton;
         private Button rotateRightButton;
+        private Button skipMeeplePlacementButton;
 
         private int previewRotationState = 0; // 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°
         private float[] rotationAngles = { 0f, 90f, 180f, 270f };
@@ -25,6 +26,8 @@ namespace Assets.Scripts
 
         public List<Meeple> InstantiatedGrayMeeples => instantiatedGrayMeeples;
         public List<Meeple> InstantiatedPlayerMeeples => instantiatedPlayerMeeples;
+
+        public Action OnMeepleSkipped { get; internal set; }
 
         private void OnEnable()
         {
@@ -39,6 +42,7 @@ namespace Assets.Scripts
             previewImage = root.Q<Image>("PreviewImage");
             rotateLeftButton = root.Q<Button>("RotateLeftButton");
             rotateRightButton = root.Q<Button>("RotateRightButton");
+            skipMeeplePlacementButton = root.Q<Button>("SkipMeeplePlacement");
             if (previewImage == null)
             {
                 Debug.LogError("PreviewImage not found in UXML.");
@@ -52,6 +56,14 @@ namespace Assets.Scripts
                 rotateRightButton.clicked += RotateRight;
             else
                 Debug.LogError("RotateRightButton not found in UXML.");
+
+            if (skipMeeplePlacementButton != null)
+            {
+                skipMeeplePlacementButton.clicked += SkipMeeplePlacement;
+                HideEndTurnButton();
+            }
+            else
+                Debug.LogError("SkipMeeplePlacement button not found in UXML.");
         }
 
         private void OnDisable()
@@ -188,6 +200,8 @@ namespace Assets.Scripts
             if (previewImage != null)
             {
                 previewImage.style.display = DisplayStyle.None;
+                rotateLeftButton.style.display = DisplayStyle.None;
+                rotateRightButton.style.display = DisplayStyle.None;
             }
         }
 
@@ -197,6 +211,8 @@ namespace Assets.Scripts
             if (previewImage != null)
             {
                 previewImage.style.display = DisplayStyle.Flex;
+                rotateLeftButton.style.display = DisplayStyle.Flex;
+                rotateRightButton.style.display = DisplayStyle.Flex;
             }
         }
 
@@ -269,5 +285,26 @@ namespace Assets.Scripts
             Debug.Log("Rotation controls enabled.");
         }
 
+        private void SkipMeeplePlacement()
+        {
+            Debug.Log("SkipMeeplePlacement button clicked.");
+            OnMeepleSkipped?.Invoke();
+        }
+
+        public void ShowEndTurnButton()
+        {
+            if (skipMeeplePlacementButton != null)
+            {
+                skipMeeplePlacementButton.style.display = DisplayStyle.Flex;
+            }
+        }
+
+        public void HideEndTurnButton()
+        {
+            if (skipMeeplePlacementButton != null)
+            {
+                skipMeeplePlacementButton.style.display = DisplayStyle.None;
+            }
+        }
     }
 }
