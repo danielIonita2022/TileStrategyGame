@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Assets.Scripts
@@ -45,6 +46,7 @@ namespace Assets.Scripts
         /// </summary>
         private void SwitchTurn()
         {
+            previewUIController.HideEndTurnButton();
             CalculateCompletedFeatures();
             currentPlayerIndex = (currentPlayerIndex + 1) % players.Count;
             Debug.Log($"GameManager: It's now {players[currentPlayerIndex].PlayerName}'s turn.");
@@ -69,7 +71,6 @@ namespace Assets.Scripts
                 meepleManager.RemoveMeeple(meeple.MeepleData);
             }
             previewUIController.ClearMeepleOptions();
-            previewUIController.HideEndTurnButton();
             SwitchTurn();
         }
 
@@ -201,15 +202,26 @@ namespace Assets.Scripts
                 FeatureType featureType = key.featureType;
                 int featureIndex = key.featureIndex;
                 MeepleData meepleData = tileFeatureMeepleMap[key];
-                if (boardManager.IsFeatureComplete(tile, featureType, featureIndex))
+                bool isMeepleFlaggedForRemoval = meeplesFlaggedForRemoval.Any(m => m.Equals(meepleData));
+                if (!isMeepleFlaggedForRemoval)
                 {
-                    PlayerColor playerColor = meepleData.GetPlayerColor();
-                    int score = CalculateScore(tile, featureType, featureIndex);
-                    Player scoringPlayer = players.Find(p => p.PlayerColor == playerColor);
-                    scoringPlayer.Score += score;
-                    scoringPlayer.MeepleCount++;
-                    Debug.Log($"GameManager: Player {scoringPlayer.PlayerName} scored {score} points. TOTAL: {scoringPlayer.Score}");
-                    meeplesFlaggedForRemoval.Add(meepleData);
+                    if (boardManager.IsFeatureComplete(tile, featureType, featureIndex))
+                    {
+                        List<PlayerColor> scoringPlayerColors = meepleManager.GetScoringPlayerColorMeeples(tile, featureType, featureIndex);
+                        List<Player> scoringPlayers = players.FindAll(p => scoringPlayerColors.Contains(p.PlayerColor));
+                        foreach (Player scoringPlayer in scoringPlayers)
+                        {
+                            int score = CalculateScore(tile, featureType, featureIndex);
+                            scoringPlayer.Score += score;
+                            scoringPlayer.MeepleCount++;
+                            Debug.Log($"GameManager: Player {scoringPlayer.PlayerName} scored {score} points. TOTAL: {scoringPlayer.Score}");
+                        }
+                        Dictionary<TileFeatureKey, MeepleData> connectedMeeples = meepleManager.GetConnectedMeeples(tile, featureType, featureIndex);
+                        foreach (var connectedMeeple in connectedMeeples)
+                        {
+                            meeplesFlaggedForRemoval.Add(connectedMeeple.Value);
+                        }
+                    }
                 }
             }
             RemovePlayerMeeples(meeplesFlaggedForRemoval);
@@ -235,11 +247,20 @@ namespace Assets.Scripts
             }
             else if ((featureType & FeatureType.CITY) == FeatureType.CITY)
             {
+                HashSet<Tile> connected_cities = boardManager.GetConnectedTiles(tile, featureType, featureIndex);
+                int bonusPoints = 0;
+                foreach (Tile connected_city in connected_cities)
+                {
+                    if (connected_city.GetSpecialFeatures() == FeatureType.SHIELD)
+                    {
+                        bonusPoints += 2;
+                    }
+                }
                 if (endGame)
                 {
-                    return boardManager.GetConnectedTiles(tile, featureType, featureIndex).Count;
+                    return connected_cities.Count + bonusPoints / 2;
                 }
-                return boardManager.GetConnectedTiles(tile, featureType, featureIndex).Count * 2;
+                return connected_cities.Count * 2 + bonusPoints;
             }
             else throw new InvalidOperationException("Invalid feature type.");
         }

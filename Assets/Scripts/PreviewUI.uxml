@@ -21,7 +21,7 @@
         
         </engine:VisualElement>
 
-        <engine:Button name="SkipMeeplePlacement" text="End Turn" />
+         <engine:Button name="SkipMeeplePlacement" text="End Turn" class="end-turn-button" />
     
     </engine:VisualElement>
 

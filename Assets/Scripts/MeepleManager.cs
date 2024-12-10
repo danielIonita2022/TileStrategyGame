@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -137,7 +138,7 @@ namespace Assets.Scripts
         /// <summary>
         /// Retrieves all meeples connected to the specified feature.
         /// </summary>
-        private Dictionary<TileFeatureKey, MeepleData> GetConnectedMeeples(Tile tile, FeatureType featureType, int featureIndex)
+        public Dictionary<TileFeatureKey, MeepleData> GetConnectedMeeples(Tile tile, FeatureType featureType, int featureIndex)
         {
             // Implement logic to traverse connected features and collect meeples
             // This may involve querying adjacent tiles and their features
@@ -158,6 +159,24 @@ namespace Assets.Scripts
             }
             return connectedMeeples;
         }
-        
+
+        public List<PlayerColor> GetScoringPlayerColorMeeples(Tile tile, FeatureType featureType, int featureIndex)
+        {
+            Dictionary<TileFeatureKey, MeepleData> connectedMeeples = GetConnectedMeeples(tile, featureType, featureIndex);
+            Dictionary<PlayerColor, int> playersWithMeepleAmount = new Dictionary<PlayerColor, int>();
+            foreach (PlayerColor playerColor in Enum.GetValues(typeof(PlayerColor)))
+            {
+                playersWithMeepleAmount[playerColor] = 0;
+            }
+            foreach (var meepleData in connectedMeeples.Values)
+            {
+                PlayerColor playerColor = meepleData.GetPlayerColor();
+                playersWithMeepleAmount[playerColor] += 1;
+            }
+            int maxMeepleAmount = playersWithMeepleAmount.Values.Max();
+            List<PlayerColor> scoringPlayers = playersWithMeepleAmount.Where(x => x.Value == maxMeepleAmount).Select(x => x.Key).ToList();
+            return scoringPlayers;
+        }
+
     }
 }

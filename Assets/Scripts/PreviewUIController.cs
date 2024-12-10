@@ -76,7 +76,7 @@ namespace Assets.Scripts
                 rotateRightButton.clicked -= RotateRight;
         }
 
-        public static Vector3 GetOffset(int edgeIndex, float tileSize = 8f, float meepleOffset = 0.0f)
+        public static Vector3 GetOffset(int edgeIndex, float tileSize = 8f, float meepleOffset = 0.85f)
         {
             Vector3 offset = Vector3.zero;
             switch (edgeIndex)
@@ -85,16 +85,16 @@ namespace Assets.Scripts
                     offset = Vector3.zero;
                     break;
                 case 1: // North
-                    offset = new Vector3(0, tileSize / 2 + meepleOffset, 0);
+                    offset = new Vector3(0, tileSize / 2 - meepleOffset, 0);
                     break;
                 case 2: // East
-                    offset = new Vector3(tileSize / 2 + meepleOffset, 0, 0);
+                    offset = new Vector3(tileSize / 2 - meepleOffset, 0, 0);
                     break;
                 case 3: // South
-                    offset = new Vector3(0, -tileSize / 2 - meepleOffset, 0);
+                    offset = new Vector3(0, -tileSize / 2 + meepleOffset, 0);
                     break;
                 case 4: // West
-                    offset = new Vector3(-tileSize / 2 - meepleOffset, 0, 0);
+                    offset = new Vector3(-tileSize / 2 + meepleOffset, 0, 0);
                     break;
                 default:
                     Debug.LogError("Invalid edge index.");
@@ -118,8 +118,17 @@ namespace Assets.Scripts
                 Vector3 offset = GetOffset(edgeIndex);
                 Vector3 meeplePosition = tileWorldPosition + offset;
                 // Instantiate the single meeple prefab
-                GameObject meepleGO = Instantiate(meeplePrefab, meepleParent);
+                GameObject meepleGO = Instantiate(meeplePrefab, meeplePosition, Quaternion.identity, meepleParent);
                 meepleGO.transform.position = meeplePosition;
+                BoxCollider collider = meepleGO.GetComponent<BoxCollider>();
+                if (collider != null)
+                {
+                    collider.center = Vector3.zero; // Assuming the collider is at the origin of the prefab
+                }
+                else
+                {
+                    Debug.LogError("MeeplePrefab does not have a BoxCollider component.");
+                }
                 Meeple meeple = meepleGO.GetComponent<Meeple>();
                 if (meeple != null)
                 {

@@ -49,7 +49,6 @@ namespace Assets.Scripts
                 {
                     sr.sprite = tileData.tileSprite;
                 }
-                HandleSpecialFeatures();
             }
         }
 
@@ -105,39 +104,34 @@ namespace Assets.Scripts
             return featuresAndEdgeIndexes;
         }
 
-        private void HandleSpecialFeatures()
+        public FeatureType GetSpecialFeatures()
         {
             if (CurrentCenterFeature.HasFlag(FeatureType.SHIELD))
             {
-                // Implement logic for SHIELD, e.g., doubling points
-                Debug.Log($"Tile at {GridPosition} has a SHIELD at the center. Points doubled.");
-                // Example: Add a shield sprite overlay or modify game state
+                return FeatureType.SHIELD;
             }
 
-            // Check edges for SHIELD if applicable
             else if (CurrentNorthEdge.HasFlag(FeatureType.SHIELD))
             {
-                Debug.Log($"Tile at {GridPosition} has a SHIELD on the North edge.");
-                // Implement specific logic for SHIELD on the North edge
+                return FeatureType.SHIELD;
             }
 
             else if (CurrentEastEdge.HasFlag(FeatureType.SHIELD))
             {
-                Debug.Log($"Tile at {GridPosition} has a SHIELD on the East edge.");
-                // Implement specific logic for SHIELD on the East edge
+                return FeatureType.SHIELD;
             }
 
             else if (CurrentSouthEdge.HasFlag(FeatureType.SHIELD))
             {
-                Debug.Log($"Tile at {GridPosition} has a SHIELD on the South edge.");
-                // Implement specific logic for SHIELD on the South edge
+                return FeatureType.SHIELD;
             }
 
             else if (CurrentWestEdge.HasFlag(FeatureType.SHIELD))
             {
-                Debug.Log($"Tile at {GridPosition} has a SHIELD on the West edge.");
-                // Implement specific logic for SHIELD on the West edge
+                return FeatureType.SHIELD;
             }
+
+            return FeatureType.NONE;
         }
 
         /// <summary>

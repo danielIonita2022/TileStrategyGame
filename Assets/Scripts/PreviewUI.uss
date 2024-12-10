@@ -53,3 +53,25 @@
 .rotate-button:active .rotate-image {
     opacity: 0.6;
 }
+
+.end-turn-button {
+    left: 320px;
+    background-color: red; /* Red background */
+    unity-color: white;    /* White text color */
+    unity-font-style: bold; /* Bold text */
+    font-size: 16px;       /* Text size */
+    padding: 10px 20px;    /* Button padding */
+    border-radius: 5px;    /* Rounded corners */
+
+    /* Optional: Transition for smooth opacity changes */
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Hover and Active States for End Turn Button */
+.end-turn-button:hover {
+    opacity: 0.8;
+}
+
+.end-turn-button:active {
+    opacity: 0.6;
+}
