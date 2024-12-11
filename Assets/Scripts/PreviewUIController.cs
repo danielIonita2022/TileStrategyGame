@@ -120,10 +120,10 @@ namespace Assets.Scripts
                 // Instantiate the single meeple prefab
                 GameObject meepleGO = Instantiate(meeplePrefab, meeplePosition, Quaternion.identity, meepleParent);
                 meepleGO.transform.position = meeplePosition;
-                BoxCollider collider = meepleGO.GetComponent<BoxCollider>();
+                BoxCollider2D collider = meepleGO.GetComponent<BoxCollider2D>();
                 if (collider != null)
                 {
-                    collider.center = Vector3.zero; // Assuming the collider is at the origin of the prefab
+                    collider.offset = Vector2.zero; // Assuming the collider is at the origin of the prefab
                 }
                 else
                 {

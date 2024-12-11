@@ -20,8 +20,6 @@ namespace Assets.Scripts
 
         private Dictionary<Vector2Int, GameObject> placedTiles = new Dictionary<Vector2Int, GameObject>();
         private HashSet<Vector2Int> currentHighlightPositions;
-        private int maxTiles = 50;
-        private int currentTileCount = 0;
 
         public event Action OnNoMoreTilePlacements;
         public event Action<Sprite> OnPreviewImageUpdate;
@@ -109,7 +107,7 @@ namespace Assets.Scripts
                     attempts++;
                 }
             }
-            if (attempts >= maxAttempts)
+            if (tileDeck.Count == 0 || attempts >= maxAttempts)
             {
                 currentPreviewTileData = null;
                 Debug.Log("No more tiles to draw.");
@@ -281,12 +279,6 @@ namespace Assets.Scripts
         public Tile PlaceTile(Vector2Int position, int rotationState, GameObject highlightTile = null, bool isStarter = false)
         {
             Tile newTile = null;
-            if (currentTileCount >= maxTiles)
-            {
-                Debug.Log("BoardManager: Maximum tile count reached. No more tiles can be placed.");
-                OnNoMoreTilePlacements?.Invoke();
-                return null;
-            }
 
             // Ensure the position is within bounds and not already occupied
             if (placedTiles.ContainsKey(position))
@@ -386,14 +378,11 @@ namespace Assets.Scripts
                 // Alternatively, have a separate starter tile or assign as needed
                 Debug.Log("BoardManager: Placing starter tile.");
                 placedTiles.Add(position, newTileObj);
-                currentTileCount++;
                 HighlightAvailablePositions();
                 return null;
             }
 
             placedTiles.Add(position, newTileObj);
-            currentTileCount++;
-            Debug.Log($"Tile placed at {position}. Current tile count: {currentTileCount}");
 
             return newTile;
         }
@@ -445,35 +434,11 @@ namespace Assets.Scripts
                             if (!newEdge.HasFlag(FeatureType.FIELD))
                                 return false;
                             break;
-                        case FeatureType.SHIELD:
-                            // Define SHIELD compatibility
-                            // For example, SHIELD might not interfere with other features
-                            // Or it might have specific rules
-                            // Here, assuming SHIELD is a special marker and doesn't affect compatibility
-                            // Therefore, no action needed
-                            break;
                         default:
                             break;
                     }
                 }
             }
-
-            // Additional checks based on center features
-            // For example, ensure that if roads pass through the center, they continue seamlessly
-
-            // Example: If new tile has ROAD_INTERSECTION at center, ensure road continuity
-            if (newCenter.HasFlag(FeatureType.ROAD_INTERSECTION))
-            {
-                // Implement specific logic if roads must pass through intersections
-                // This could involve ensuring that roads are connected to at least two edges
-            }
-
-            if (existingCenter.HasFlag(FeatureType.ROAD_INTERSECTION))
-            {
-                // Similar logic if the existing tile has a ROAD_INTERSECTION at center
-            }
-
-            // SHIELD handling can be implemented here if it affects compatibility
 
             return true;
         }
@@ -604,24 +569,6 @@ namespace Assets.Scripts
             TileFeatureKey startingKey = new TileFeatureKey(tile, FeatureType.ROAD, featureIndex);
 
             HashSet<TileFeatureKey> connectedRoads = GetConnectedFeatureKeys(tile, FeatureType.ROAD, featureIndex);
-            //int countEnds = 0;
-            //foreach (var roadKey in connectedRoads)
-            //{
-            //    FeatureType featureType = roadKey.featureType;
-            //    if (((featureType & FeatureType.ROAD_END) == FeatureType.ROAD_END) ||
-            //        ((featureType & FeatureType.ROAD_INTERSECTION) == FeatureType.ROAD_INTERSECTION))
-            //    {
-            //        countEnds++;
-            //    }
-            //}
-            //if (countEnds == 2)
-            //{
-            //    return true;
-            //}
-            //else if (countEnds > 2)
-            //{
-            //    throw new ArgumentException("Road cannot have more than 2 ends.");
-            //}
 
             foreach (var roadKey in connectedRoads)
             {
@@ -642,9 +589,6 @@ namespace Assets.Scripts
                 }
             }
             return true;
-
-
-            //ATENTIE: Nu iei in calcul daca drumul e bucla, de asemenea e problema cu tile-ul biserica cu drum, apare doar preotul si nici nu poti apasa pe el
         }
 
         /// <summary>

@@ -22,7 +22,7 @@ namespace Assets.Scripts
         {
             InitializePlayers();
             boardManager = BoardManager.Instance;
-            boardManager.OnNoMoreTilePlacements += DisableFurtherPlacement;
+            boardManager.OnNoMoreTilePlacements += EndGame;
             boardManager.OnHighlightTileCreated += HandleHighlightTileCreated;
             boardManager.OnPreviewImageUpdate += HandlePreviewImageUpdate;
             previewUIController.OnMeepleSkipped += SkipTurn;
@@ -80,6 +80,7 @@ namespace Assets.Scripts
         private void EndGame()
         {
             gameState = GameState.Finished;
+            DisableFurtherPlacement();
             Debug.Log("GameManager: Ending the game.");
             foreach(Player player in players)
             {
@@ -274,7 +275,6 @@ namespace Assets.Scripts
                 previewUIController.HidePreview();
                 previewUIController.DisableRotation();
             }
-            EndGame();
         }
 
         /// <summary>
