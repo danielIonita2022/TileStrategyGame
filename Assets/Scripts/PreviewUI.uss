@@ -30,7 +30,21 @@
     width: 45px; /* Button width */
     height: 45px; /* Button height */
     padding: 0;
-    background-color: transparent; /* Transparent background */
+    border-width: 0;          /* Removes all borders */
+    border-color: transparent; /* Ensures border color is transparent */
+    background-color: transparent;
+    transition: background-color 0.2s ease-in-out, opacity 0.2s ease-in-out;
+}
+
+.rotate-button:hover {
+    opacity: 0.8;
+}
+
+/* Active (Pressed) State for Rotate Buttons */
+.rotate-button:active {
+    opacity: 0.6;
+    /* Darken the button by adding a semi-transparent overlay */
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 .rotate-image {
@@ -57,8 +71,7 @@
 .end-turn-button {
     left: 320px;
     background-color: red; /* Red background */
-    unity-color: white;    /* White text color */
-    unity-font-style: bold; /* Bold text */
+    -unity-font-style: bold; /* Bold text */
     font-size: 16px;       /* Text size */
     padding: 10px 20px;    /* Button padding */
     border-radius: 5px;    /* Rounded corners */

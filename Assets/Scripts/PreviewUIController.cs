@@ -15,7 +15,7 @@ namespace Assets.Scripts
         private Button rotateRightButton;
         private Button skipMeeplePlacementButton;
 
-        private int previewRotationState = 0; // 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°
+        private int previewRotationState = 0; // 0 = 0ï¿½, 1 = 90ï¿½, 2 = 180ï¿½, 3 = 270ï¿½
         private float[] rotationAngles = { 0f, 90f, 180f, 270f };
 
         [SerializeField] private GameObject meeplePrefab;
@@ -54,6 +54,7 @@ namespace Assets.Scripts
 
             if (rotateRightButton != null)
                 rotateRightButton.clicked += RotateRight;
+            
             else
                 Debug.LogError("RotateRightButton not found in UXML.");
 
@@ -76,7 +77,7 @@ namespace Assets.Scripts
                 rotateRightButton.clicked -= RotateRight;
         }
 
-        public static Vector3 GetOffset(int edgeIndex, float tileSize = 8f, float meepleOffset = 0.85f)
+        public static Vector3 GetOffset(int edgeIndex, float tileSize = 8f, float meepleOffset = 0.9f)
         {
             Vector3 offset = Vector3.zero;
             switch (edgeIndex)
@@ -123,7 +124,11 @@ namespace Assets.Scripts
                 BoxCollider2D collider = meepleGO.GetComponent<BoxCollider2D>();
                 if (collider != null)
                 {
-                    collider.offset = Vector2.zero; // Assuming the collider is at the origin of the prefab
+                    SpriteRenderer sprite = meepleGO.GetComponent<SpriteRenderer>();
+                    collider.offset = new Vector2(0, 0);
+                    collider.size = new Vector3(sprite.bounds.size.x / transform.lossyScale.x,
+                                                sprite.bounds.size.y / transform.lossyScale.y,
+                                                sprite.bounds.size.z / transform.lossyScale.z);
                 }
                 else
                 {

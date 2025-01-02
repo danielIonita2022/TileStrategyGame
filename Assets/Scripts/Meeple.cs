@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 namespace Assets.Scripts
 {
@@ -18,11 +20,33 @@ namespace Assets.Scripts
 
         private void Awake()
         {
+            //inputActions = new GameInputActions();
             MeepleData = new MeepleData(PlayerColor.GRAY, MeepleType.Road, -1);
             SpriteRenderer = GetComponent<SpriteRenderer>();
         }
+        //void OnDrawGizmos()
+        //{
+        //    var boxCollider = GetComponent<BoxCollider2D>();
+        //    if (boxCollider != null)
+        //    {
+        //        Gizmos.color = Color.green;
+        //        Vector3 center = transform.position + (Vector3)boxCollider.offset;
+        //        Vector3 size = boxCollider.size;
+        //        Gizmos.DrawWireCube(center, size);
+        //    }
+        //    else
+        //    {
+        //        Debug.Log("No box collider found on meeple");
+        //    }
+        //}
 
-        void OnMouseDown()
+        public void OnMouseDown()
+        {
+            //Debug.Log($"Meeple {gameObject.name} clicked via IPointerClickHandler!");
+            HandleMeepleClick();
+        }
+
+        public void HandleMeepleClick()
         {
             PlayerColor playerColor = MeepleData.GetPlayerColor();
             if (playerColor == PlayerColor.GRAY)
@@ -32,7 +56,7 @@ namespace Assets.Scripts
             }
             else
             {
-                Debug.Log("Meeple: Player meeple clicked, nothing happens");
+                Debug.Log($"Meeple: Player meeple of color {playerColor} and type {MeepleData.GetType()} and ID: {MeepleData.MeepleID} clicked, nothing happens");
             }
 
         }

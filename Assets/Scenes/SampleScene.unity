@@ -270,7 +270,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_BackGroundColor: {r: 0.17897472, g: 0.3712679, b: 0.554717, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -790,11 +790,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 550894355415110607, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: m_Size.x
-      value: 0.9
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 550894355415110607, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: m_Size.y
-      value: 0.8
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: 550894355415110607, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: m_Enabled
@@ -808,21 +808,33 @@ PrefabInstance:
       propertyPath: m_Offset.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 550894355415110607, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
+      propertyPath: m_IsTrigger
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 550894355415110607, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.x
+      value: 2.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 550894355415110607, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.y
+      value: 3.15
+      objectReference: {fileID: 0}
     - target: {fileID: 4894219875706682805, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: m_Name
       value: MeeplePrefab
       objectReference: {fileID: 0}
     - target: {fileID: 4971564537774012508, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: m_LocalScale.x
-      value: 6
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4971564537774012508, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: m_LocalScale.y
-      value: 6
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4971564537774012508, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: m_LocalScale.z
-      value: 6
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4971564537774012508, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -864,6 +876,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4971564537774012508, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6205003379466816593, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 7b24e0b892ed4104693acf9be6519146, type: 3}
     - target: {fileID: 6205003379466816593, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: m_SortingLayer
       value: 2
@@ -876,6 +896,10 @@ PrefabInstance:
       propertyPath: m_SortingLayerID
       value: 2145509839
       objectReference: {fileID: 0}
+    - target: {fileID: 7578080557556747309, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
+      propertyPath: SpriteRenderer
+      value: 
+      objectReference: {fileID: 238007781}
     - target: {fileID: 7578080557556747309, guid: 506fa202aba8bc44aaa92c19c31ba24a, type: 3}
       propertyPath: spriteRenderer
       value: 
