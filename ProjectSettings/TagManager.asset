@@ -12,7 +12,7 @@ TagManager:
   - 
   - Water
   - UI
-  - 
+  - BG_UI
   - 
   - 
   - 
@@ -47,4 +47,10 @@ TagManager:
     locked: 0
   - name: Meeples
     uniqueID: 2145509839
+    locked: 0
+  - name: UI
+    uniqueID: 1053889291
+    locked: 0
+  - name: BG_UI
+    uniqueID: 2297193665
     locked: 0

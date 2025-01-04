@@ -10,7 +10,9 @@ namespace Assets.Scripts
     {
         Idle,
         PlacingTile,
+        TilePlaced,
         PlacingMeeple,
+        TurnCompleted,
         Finished
     }
 }

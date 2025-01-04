@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -19,7 +20,7 @@ namespace Assets.Scripts
         private TileData currentPreviewTileData;
 
         private Dictionary<Vector2Int, GameObject> placedTiles = new Dictionary<Vector2Int, GameObject>();
-        private HashSet<Vector2Int> currentHighlightPositions;
+        public Dictionary<Vector2Int, GameObject> CurrentHighlightTiles = new Dictionary<Vector2Int, GameObject>();
 
         public event Action OnNoMoreTilePlacements;
         public event Action<Sprite> OnPreviewImageUpdate;
@@ -40,15 +41,10 @@ namespace Assets.Scripts
 
         private void Start()
         {
-            LoadTileDeck();
-            ShuffleTileDeck();
-            currentHighlightPositions = new HashSet<Vector2Int>();
-            DrawNextTile(true);
-            Vector2Int centerPos = Vector2Int.zero;
-            PlaceTile(centerPos, 0, null, true);
+            CurrentHighlightTiles = new Dictionary<Vector2Int, GameObject>();
         }
 
-        private void LoadTileDeck()
+        public void LoadTileDeck()
         {
             tileDeck.Clear();
 
@@ -71,7 +67,7 @@ namespace Assets.Scripts
             Debug.Log($"Loaded {tileDeck.Count} TileData assets into the deck.");
         }
 
-        private void ShuffleTileDeck()
+        public void ShuffleTileDeck()
         {
             for (int i = tileDeck.Count - 1; i > 0; i--)
             {
@@ -276,7 +272,7 @@ namespace Assets.Scripts
         /// <summary>
         /// Places a tile at the specified position. If isStarter is true, uses starterTileData.
         /// </summary>
-        public Tile PlaceTile(Vector2Int position, int rotationState, GameObject highlightTile = null, bool isStarter = false)
+        public Tile PlaceTile(Vector2Int position, int rotationState, bool isStarter = false)
         {
             Tile newTile = null;
 
@@ -320,14 +316,14 @@ namespace Assets.Scripts
                 Vector2Int.right * 8,
                 Vector2Int.down * 8,
                 Vector2Int.left * 8
-            };
+                };
 
                 FeatureType[] newTileEdges = {
                 newTile.CurrentNorthEdge,
                 newTile.CurrentEastEdge,
                 newTile.CurrentSouthEdge,
                 newTile.CurrentWestEdge
-            };
+                };
 
                 FeatureType newTileCenter = newTile.tileData.centerFeature;
 
@@ -361,9 +357,11 @@ namespace Assets.Scripts
 
                 // All edges are compatible; proceed
 
+                GameObject highlightTile = GetHighlightTileByPosition(position);
                 if (highlightTile != null)
                 {
                     Debug.Log($"BoardManager: Destroying highlight tile: {highlightTile.name}");
+                    CurrentHighlightTiles.Remove(position);
                     Destroy(highlightTile);
                 }
                 else
@@ -473,11 +471,11 @@ namespace Assets.Scripts
 
             foreach (Vector2Int pos in allAvailablePositions)
             {
-                if (allAvailablePositions.Contains(pos) && !currentHighlightPositions.Contains(pos))
+                if (allAvailablePositions.Contains(pos) && !CurrentHighlightTiles.ContainsKey(pos))
                 {
                     Debug.Log("BoardManager: Highlighting position: " + pos);
                     GameObject highlightTile = Instantiate(highlightTilePrefab, new Vector3(pos.x, pos.y, 0), Quaternion.identity);
-                    currentHighlightPositions.Add(pos);
+                    CurrentHighlightTiles.Add(pos, highlightTile);
                     SpriteRenderer sr = highlightTile.GetComponent<SpriteRenderer>();
                     if (sr.sprite == null)
                     {
@@ -681,6 +679,19 @@ namespace Assets.Scripts
                     }
                 }
             }
+        }
+
+        public GameObject GetHighlightTileByPosition(Vector2Int position)
+        {
+            foreach (var highlightTilePosition in CurrentHighlightTiles.Keys)
+            {
+                if (highlightTilePosition == position)
+                {
+                    return CurrentHighlightTiles[position];
+                }
+            }
+            Debug.LogWarning($"No highlight tile found at position: {position}");
+            return null;
         }
     }
 }
