@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Assets.Scripts
 {
-    public class BoardManager : MonoBehaviour
+    public class BoardManager : NetworkBehaviour
     {
         public static BoardManager Instance { get; private set; }
 
@@ -20,11 +21,16 @@ namespace Assets.Scripts
         private TileData currentPreviewTileData;
 
         private Dictionary<Vector2Int, GameObject> placedTiles = new Dictionary<Vector2Int, GameObject>();
+        public Dictionary<Vector2Int, GameObject> PlacedTiles => placedTiles;
+
         public Dictionary<Vector2Int, GameObject> CurrentHighlightTiles = new Dictionary<Vector2Int, GameObject>();
+
+        public Tile LastPlacedTile;
 
         public event Action OnNoMoreTilePlacements;
         public event Action<Sprite> OnPreviewImageUpdate;
         public event Action<HighlightTile> OnHighlightTileCreated;
+        public event Action<Tile> OnTilePlaced;
 
         private void Awake()
         {
@@ -34,14 +40,28 @@ namespace Assets.Scripts
             }
             else
             {
+                Debug.LogWarning("BoardManager: Instance already exists. Destroying duplicate.");
                 Destroy(gameObject);
-                return;
             }
         }
+
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            Debug.Log("BoardManager: OnNetworkSpawn called.");
+        }
+
 
         private void Start()
         {
             CurrentHighlightTiles = new Dictionary<Vector2Int, GameObject>();
+        }
+
+        [ClientRpc]
+        public void ArrangeBoardClientRpc(int seed)
+        {
+            LoadTileDeck();
+            ShuffleTileDeck(seed);
         }
 
         public void LoadTileDeck()
@@ -60,29 +80,33 @@ namespace Assets.Scripts
                 {
                     TileData tileDataCopy = Instantiate(tileCount.tileData); // Create a unique copy
                     tileDeck.Add(tileDataCopy);
-                    Debug.Log($"Added copy {i + 1} of TileData: {tileDataCopy.name}");
+                    //Debug.Log($"Added copy {i + 1} of TileData: {tileDataCopy.name}");
                 }
             }
 
             Debug.Log($"Loaded {tileDeck.Count} TileData assets into the deck.");
         }
 
-        public void ShuffleTileDeck()
+        public void ShuffleTileDeck(int seed)
         {
+            System.Random random = new System.Random(seed);
             for (int i = tileDeck.Count - 1; i > 0; i--)
             {
-                int j = UnityEngine.Random.Range(0, i + 1);
-                TileData temp = tileDeck[i];
-                tileDeck[i] = tileDeck[j];
-                tileDeck[j] = temp;
+                int j = random.Next(0, i + 1);
+                (tileDeck[j], tileDeck[i]) = (tileDeck[i], tileDeck[j]);
             }
-            Debug.Log("Shuffled the tile deck.");
+            for (int i = 0; i < 5; i++)
+            {
+                //Debug.Log($"Shuffled TileData: {tileDeck[i].name}");
+            }
+            Debug.Log("Shuffled the tile deck deterministically.");
         }
 
         public void DrawNextTile(bool isStarter = false)
         {
             int attempts = 0;
             int maxAttempts = tileDeck.Count;
+            Debug.Log($"BoardManager: You have a maximum of {maxAttempts} attempts to draw a tile.");
             while (tileDeck.Count > 0 && attempts < maxAttempts)
             {
                 TileData candidateTile = tileDeck[0];
@@ -98,6 +122,7 @@ namespace Assets.Scripts
                 }
                 else
                 {
+                    Debug.Log($"BoardManager: Removed candidate tile: {candidateTile.tileSprite.name} because it didn't fit anywhere.");
                     tileDeck.RemoveAt(0);
                     tileDeck.Add(candidateTile);
                     attempts++;
@@ -116,8 +141,10 @@ namespace Assets.Scripts
             if (candidateTileData != null)
             {
                 List<Vector2Int> availablePositions = GetAvailablePositions();
+                Debug.Log($"List of available positions size: {availablePositions.Count}");
                 foreach (Vector2Int pos in availablePositions)
                 {
+                    //Debug.Log($"{pos.x}, {pos.y}");
                     for (int rotationState = 0; rotationState < 4; rotationState++)
                     {
                         List<FeatureType> rotatedEdges = GetRotatedEdges(candidateTileData, rotationState);
@@ -132,20 +159,22 @@ namespace Assets.Scripts
                         Vector2Int.right * 8,
                         Vector2Int.down * 8,
                         Vector2Int.left * 8
-                    };
+                        };
 
                         FeatureType[] tileEdges = {
                         rotatedNorth,
                         rotatedEast,
                         rotatedSouth,
                         rotatedWest
-                    };
+                        };
+
                         for (int i = 0; i < directions.Length; i++)
                         {
                             Vector2Int adjacentPos = pos + directions[i];
                             if (placedTiles.ContainsKey(adjacentPos))
                             {
                                 Tile adjacentTile = placedTiles[adjacentPos].GetComponent<Tile>();
+                                //Debug.Log($"adjacent tile: {adjacentTile.name} - with edges: {adjacentTile.CurrentNorthEdge}{adjacentTile.CurrentEastEdge}{adjacentTile.CurrentSouthEdge}{adjacentTile.CurrentWestEdge}{adjacentTile.CurrentCenterFeature}");
                                 if (adjacentTile == null || adjacentTile.tileData == null)
                                 {
                                     // Invalid adjacent tile, skip
@@ -154,12 +183,15 @@ namespace Assets.Scripts
 
                                 // Determine corresponding edge index
                                 int oppositeEdgeIndex = (i + 2) % 4 + 1; // Opposite direction
+                                //Debug.Log($"Opposite edge index {oppositeEdgeIndex}");
 
                                 // Get the adjacent tile's edge
                                 FeatureType adjacentEdge = adjacentTile.GetFeature(oppositeEdgeIndex);
 
                                 // Get current tile's edge
                                 FeatureType currentEdge = tileEdges[i];
+
+                                //Debug.Log($"currentEdge: {currentEdge}, adjacentEdge: {adjacentEdge}");
 
                                 // Check compatibility
                                 if (!AreFeaturesCompatible(adjacentEdge, currentEdge, candidateTileData.centerFeature, adjacentTile.tileData.centerFeature))
@@ -176,6 +208,10 @@ namespace Assets.Scripts
                         }
                     }
                 }
+            }
+            else
+            {
+                Debug.Log("Candidate Tile Data is null!");
             }
 
             return false;
@@ -216,6 +252,7 @@ namespace Assets.Scripts
         /// <returns>List of Vector2Int positions.</returns>
         private List<Vector2Int> GetAvailablePositions()
         {
+            Debug.Log($"BoardManager: placedTiles count: {placedTiles.Count}.");
             HashSet<Vector2Int> availablePositions = new HashSet<Vector2Int>();
 
             foreach (Vector2Int pos in placedTiles.Keys)
@@ -225,7 +262,7 @@ namespace Assets.Scripts
                 pos + Vector2Int.down * 8,
                 pos + Vector2Int.left * 8,
                 pos + Vector2Int.right * 8
-            };
+                };
 
                 foreach (Vector2Int neighbor in neighbors)
                 {
@@ -269,48 +306,51 @@ namespace Assets.Scripts
             }
         }
 
+        [ServerRpc (RequireOwnership = false)]
+        public void PlaceTileServerRpc(Vector2Int position, int rotationState, bool isStarter = false)
+        {
+            PlaceTileClientRpc(position, rotationState, isStarter);
+        }
+
         /// <summary>
         /// Places a tile at the specified position. If isStarter is true, uses starterTileData.
         /// </summary>
-        public Tile PlaceTile(Vector2Int position, int rotationState, bool isStarter = false)
+        [ClientRpc]
+        public void PlaceTileClientRpc(Vector2Int position, int rotationState, bool isStarter = false)
         {
-            Tile newTile = null;
-
+            Debug.Log("BoardManager: Entered PlaceTileClientRpc");
             // Ensure the position is within bounds and not already occupied
             if (placedTiles.ContainsKey(position))
             {
                 Debug.LogWarning($"BoardManager: Cannot place tile at {position} - Position already occupied.");
-                return null;
+                return;
             }
 
             // Instantiate the tile prefab
             GameObject newTileObj = Instantiate(tilePrefab, new Vector3(position.x, position.y, 0), Quaternion.identity);
-            newTile = newTileObj.GetComponent<Tile>();
+            Tile newTile = newTileObj.GetComponent<Tile>();
             if (newTile == null)
             {
                 Debug.LogError("BoardManager: Tile component not found on instantiated tile.");
                 Destroy(newTileObj);
-                return null;
+                return;
             }
 
-            // Assign the grid position
             newTile.GridPosition = position;
 
             if (!isStarter)
             {
-                // Assign the current preview tile data
                 newTile.tileData = currentPreviewTileData;
                 if (newTile.tileData == null)
                 {
                     Debug.LogError($"BoardManager: No TileData assigned for tile at position: {position}");
                     Destroy(newTileObj);
-                    return null;
+                    return;
                 }
                 newTile.AssignFeatures();
 
                 newTile.RotateTile(rotationState);
 
-                // Check compatibility with adjacent tiles
                 Vector2Int[] directions = {
                 Vector2Int.up * 8,
                 Vector2Int.right * 8,
@@ -350,12 +390,20 @@ namespace Assets.Scripts
                         {
                             Debug.LogWarning($"BoardManager: Cannot place tile at {position}: Feature mismatch on {directions[i]} side.");
                             Destroy(newTileObj);
-                            return null;
+                            return;
                         }
                     }
                 }
 
                 // All edges are compatible; proceed
+                if (LastPlacedTile == newTile)
+                {
+                    Debug.Log("BoardManager: The new tile is the exact same as the last one!");
+                    return;
+                }
+
+                Debug.Log("BoardManager: Assigning LastPlacedTile");
+                LastPlacedTile = newTile;
 
                 GameObject highlightTile = GetHighlightTileByPosition(position);
                 if (highlightTile != null)
@@ -376,13 +424,13 @@ namespace Assets.Scripts
                 // Alternatively, have a separate starter tile or assign as needed
                 Debug.Log("BoardManager: Placing starter tile.");
                 placedTiles.Add(position, newTileObj);
-                HighlightAvailablePositions();
-                return null;
+                HighlightAvailablePositionsClientRpc();
+                return;
             }
 
             placedTiles.Add(position, newTileObj);
 
-            return newTile;
+            OnTilePlaced?.Invoke(LastPlacedTile);
         }
 
         /// <summary>
@@ -391,7 +439,10 @@ namespace Assets.Scripts
         private bool AreFeaturesCompatible(FeatureType existingEdge, FeatureType newEdge, FeatureType newCenter, FeatureType existingCenter)
         {
             if (existingEdge == FeatureType.NONE || newEdge == FeatureType.NONE)
+            {
+                Debug.Log("BoardManager: One of the edges is none");
                 return false;
+            }
 
             // Iterate through each feature in existingEdge
             foreach (FeatureType feature in Enum.GetValues(typeof(FeatureType)))
@@ -444,7 +495,9 @@ namespace Assets.Scripts
         /// <summary>
         /// Highlights all valid positions where tiles can be placed.
         /// </summary>
-        public void HighlightAvailablePositions()
+        /// 
+        [ClientRpc]
+        public void HighlightAvailablePositionsClientRpc()
         {
             Debug.Log("Highlighting available positions");
 

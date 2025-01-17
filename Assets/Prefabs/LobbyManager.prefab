@@ -46,9 +46,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   MaxPlayers: 4
   LobbyName: MyLobby
-  LobbyCodeInputField: {fileID: 0}
-  LobbyStatusText: {fileID: 0}
-  HostButton: {fileID: 0}
-  JoinButton: {fileID: 0}
-  StartGameButton: {fileID: 0}
-  UserNameField: {fileID: 0}
+  uiManager: {fileID: 0}
+  gameManagerPrefab: {fileID: 0}

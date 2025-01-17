@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Unity.Mathematics;
+using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
 using Random = System.Random;
@@ -14,7 +15,7 @@ namespace Assets.Scripts
     /// <summary>
     /// Manages the associations between Tiles and Meeples.
     /// </summary>
-    public class MeepleManager : MonoBehaviour
+    public class MeepleManager : NetworkBehaviour
     {
         // Singleton Instance
         public static MeepleManager Instance { get; private set; }
@@ -28,6 +29,8 @@ namespace Assets.Scripts
 
         private static HashSet<int> _usedMeepleIDs = new HashSet<int>();
         private static Random _random = new Random();
+
+        public Action<MeepleData> GetMeepleData;
 
         void Awake()
         {
@@ -64,12 +67,10 @@ namespace Assets.Scripts
         /// <param name="featureType">The feature type to place the meeple on.</param>
         /// <param name="featureIndex">The unique index of the feature on the tile.</param>
         /// <param name="meepleType">The type of meeple to place.</param>
-        /// <returns>True if placement is successful; otherwise, false.</returns>
         public MeepleData PlaceMeeple(Tile tile, FeatureType featureType, int featureIndex)
         {
             TileFeatureKey key = new TileFeatureKey(tile, featureType, featureIndex);
 
-            // Check if the feature is already occupied
             if (tileFeatureMeepleMap.ContainsKey(key))
             {
                 Debug.Log($"Feature {featureType}#{featureIndex} on Tile at {tile.GridPosition} is already occupied.");
@@ -85,19 +86,25 @@ namespace Assets.Scripts
                 return null;
             }
 
-            // Register the association
-            tileFeatureMeepleMap[key] = meepleData;
-
-            Debug.Log($"Placed {convertedMeepleType} meeple on {featureType}#{featureIndex} of Tile at {tile.GridPosition}.");
-
+            tileFeatureMeepleMap.Add(key, meepleData);
+            Debug.Log($"MeepleManager: Added to tileFeatureMeepleMap meeple with ID {meepleData.MeepleID}");
+            Debug.Log($"MeepleManager: tileFeatureMeepleMap size upon placing a meeple: {tileFeatureMeepleMap.Count}");
             return meepleData;
         }
 
-        public void RemoveMeeple(MeepleData meepleData)
+        [ServerRpc (RequireOwnership = false)]
+        public void RemoveMeepleServerRpc(int meepleDataId)
         {
-            tileFeatureMeepleMap.ContainsValue(meepleData);
+            MeepleData meepleData = tileFeatureMeepleMap.FirstOrDefault(x => x.Value.MeepleID == meepleDataId).Value;
             TileFeatureKey key = tileFeatureMeepleMap.FirstOrDefault(x => x.Value == meepleData).Key;
             tileFeatureMeepleMap.Remove(key);
+            Debug.Log($"MeepleManager: Removed from tilefeatureMeepleMap meeple with ID {meepleDataId}");
+        }
+
+        public void UpdateMeepleData(int meepleID, PlayerColor playerColor)
+        {
+            MeepleData meepleData = tileFeatureMeepleMap.FirstOrDefault(x => x.Value.MeepleID == meepleID).Value;
+            meepleData.SetPlayerColor(playerColor);
         }
 
         /// <summary>
@@ -112,7 +119,7 @@ namespace Assets.Scripts
             // 3. Connected features do not have meeples.
 
             // Rule 1: Eligibility
-            if (((featureType & FeatureType.CITY) != FeatureType.CITY )&&
+            if (((featureType & FeatureType.CITY) != FeatureType.CITY) &&
                 ((featureType & FeatureType.ROAD) != FeatureType.ROAD) &&
                 ((featureType & FeatureType.MONASTERY) != FeatureType.MONASTERY))
             {
@@ -140,9 +147,6 @@ namespace Assets.Scripts
         /// </summary>
         public Dictionary<TileFeatureKey, MeepleData> GetConnectedMeeples(Tile tile, FeatureType featureType, int featureIndex)
         {
-            // Implement logic to traverse connected features and collect meeples
-            // This may involve querying adjacent tiles and their features
-
             Dictionary<TileFeatureKey, MeepleData> connectedMeeples = new Dictionary<TileFeatureKey, MeepleData>();
             HashSet<TileFeatureKey> connectedKeys = boardManager.GetConnectedFeatureKeys(tile, featureType, featureIndex);
 
@@ -154,7 +158,7 @@ namespace Assets.Scripts
                 }
                 else
                 {
-                    //Debug.Log($"No meeple found on connected feature {key.featureType}#{key.featureIndex} of Tile at {key.tile.GridPosition}.");
+                    Debug.Log($"No meeple found on connected feature {key.featureType}#{key.featureIndex} of Tile at {key.tile.GridPosition}.");
                 }
             }
             return connectedMeeples;

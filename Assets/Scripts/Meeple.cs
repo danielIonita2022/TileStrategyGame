@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Assets.Scripts
 {
 
-    public class Meeple : MonoBehaviour
+    public class Meeple : NetworkBehaviour
     {
         
         [SerializeField] public SpriteRenderer SpriteRenderer;
@@ -16,10 +17,16 @@ namespace Assets.Scripts
 
         public event Action<Meeple> OnGrayMeepleClicked;
 
-        private void Awake()
+        public void Awake()
         {
             MeepleData = new MeepleData(PlayerColor.GRAY, MeepleType.Road, -1);
             SpriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            Debug.Log("Meeple: Entered OnNetworkSpawn");
         }
 
         void OnMouseDown()
@@ -40,32 +47,10 @@ namespace Assets.Scripts
         /// <summary>
         /// Updates the visual representation based on meeple type and player color.
         /// </summary>
-        public void UpdateMeepleVisual(MeepleType type, PlayerColor color)
+        public void UpdateMeepleData(MeepleType type, PlayerColor color)
         {
-            if (SpriteRenderer == null)
-            {
-                SpriteRenderer = GetComponent<SpriteRenderer>();
-            }
             MeepleData.SetMeepleType(type);
             MeepleData.SetPlayerColor(color);
-
-            string colorString = Converters.ConvertPlayerColorToString(color);
-
-            switch (type)
-            {
-                case MeepleType.Knight:
-                    SpriteRenderer.sprite = Resources.Load<Sprite>($"Sprites/Meeples/{colorString}Knight");
-                    break;
-                case MeepleType.Bishop:
-                    SpriteRenderer.sprite = Resources.Load<Sprite>($"Sprites/Meeples/{colorString}Bishop");
-                    break;
-                case MeepleType.Road:
-                    SpriteRenderer.sprite = Resources.Load<Sprite>($"Sprites/Meeples/{colorString}Meeple");
-                    break;
-                default:
-                    SpriteRenderer.sprite = null;
-                    break;
-            }
         }
     }
 

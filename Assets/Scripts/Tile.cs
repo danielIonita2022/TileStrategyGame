@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Assets.Scripts
 {
-    public class Tile : MonoBehaviour
+    public class Tile : NetworkBehaviour
     {
         [Header("Tile Data")]
         public TileData tileData;
@@ -21,11 +22,10 @@ namespace Assets.Scripts
         public FeatureType CurrentWestEdge { get; set; }
         public FeatureType CurrentCenterFeature { get; set; }
 
-        private void Awake()
+        public void Awake()
         {
             if (tileData != null)
             {
-                // Store original edges
                 CurrentNorthEdge = tileData.northEdge;
                 CurrentEastEdge = tileData.eastEdge;
                 CurrentSouthEdge = tileData.southEdge;
@@ -38,6 +38,12 @@ namespace Assets.Scripts
             {
                 Debug.LogWarning($"Tile at {GridPosition} has no TileData assigned.");
             }
+        }
+
+        public override void OnNetworkSpawn()
+        {
+            Debug.Log($"Tile: Entered OnNetworkSpawn for tile {this.name}");
+            
         }
 
         private void Start()

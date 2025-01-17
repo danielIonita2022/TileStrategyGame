@@ -8,6 +8,7 @@ using UnityEngine.UI;
 using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using System;
+using Assets.Scripts;
 
 public class LobbyManager : MonoBehaviour
 {
@@ -15,13 +16,10 @@ public class LobbyManager : MonoBehaviour
     public int MaxPlayers = 4;
     public string LobbyName = "MyLobby";
 
-    [Header("UI References")]
-    public InputField LobbyCodeInputField;
-    public Text LobbyStatusText;
-    public Button HostButton;
-    public Button JoinButton;
-    public Button StartGameButton;
-    public InputField UserNameField;
+    [SerializeField] private UIManager uiManager;
+
+    [Header("Prefabs")]
+    //public GameObject gameManagerPrefab;
 
     private Lobby currentLobby;
 
@@ -29,15 +27,23 @@ public class LobbyManager : MonoBehaviour
     {
         if (RelayManager.Instance == null)
         {
-            Debug.LogError("RelayManager instance not found.");
+            Debug.LogError("LobbyManager: RelayManager instance not found.");
             return;
         }
 
-        HostButton.onClick.AddListener(OnHostClicked);
-        JoinButton.onClick.AddListener(OnJoinClicked);
-        StartGameButton.onClick.AddListener(OnStartGameClicked);
+        if (UIManager.Instance == null)
+        {
+            Debug.LogError("LobbyManager: UIManager instance not found.");
+            return;
+        }
 
-        StartGameButton.gameObject.SetActive(false); // Visible only to host
+        uiManager = UIManager.Instance;
+
+        uiManager.HostButton.onClick.AddListener(OnHostClicked);
+        uiManager.JoinButton.onClick.AddListener(OnJoinClicked);
+        uiManager.StartGameButton.onClick.AddListener(OnStartGameClicked);
+
+        uiManager.StartGameButton.gameObject.SetActive(false); // Visible only to host
     }
 
     private string GenerateRandomUserName()
@@ -50,13 +56,13 @@ public class LobbyManager : MonoBehaviour
 
     public async void OnHostClicked()
     {
-        HostButton.interactable = false;
-        LobbyStatusText.text = "Hosting Lobby...";
+        uiManager.HostButton.interactable = false;
+        uiManager.LobbyStatusText.text = "Hosting Lobby...";
 
         bool relayHosted = await RelayManager.Instance.HostRelayAsync();
         if (relayHosted)
         {
-            string username = UserNameField.text;
+            string username = uiManager.UserNameField.text;
             if (string.IsNullOrEmpty(username))
             {
                 username = GenerateRandomUserName();
@@ -78,42 +84,42 @@ public class LobbyManager : MonoBehaviour
                 currentLobby = await LobbyService.Instance.CreateLobbyAsync(LobbyName, MaxPlayers, options);
                 Debug.Log($"Lobby created with ID: {currentLobby.Id}");
 
-                LobbyStatusText.text = $"Lobby Hosted!\nLobby Code: {currentLobby.LobbyCode}\nRelay Join Code: {relayJoinCode}";
+                uiManager.LobbyStatusText.text = $"Lobby Hosted!\nLobby Code: {currentLobby.LobbyCode}\nRelay Join Code: {relayJoinCode}";
                 Debug.Log($"Current Lobby size (host): {currentLobby.Players.Count}");
 
-                StartGameButton.gameObject.SetActive(true); // Host can start the game
+                uiManager.StartGameButton.gameObject.SetActive(true); // Host can start the game
             }
             catch (LobbyServiceException e)
             {
-                LobbyStatusText.text = $"Error Creating Lobby: {e.Message}";
+                uiManager.LobbyStatusText.text = $"Error Creating Lobby: {e.Message}";
                 Debug.LogError($"Lobby Creation Error: {e.Message}");
-                HostButton.interactable = true;
+                uiManager.HostButton.interactable = true;
             }
         }
         else
         {
-            LobbyStatusText.text = "Failed to Host Relay.";
-            HostButton.interactable = true;
+            uiManager.LobbyStatusText.text = "Failed to Host Relay.";
+            uiManager.HostButton.interactable = true;
         }
     }
 
     // Join a lobby using a lobby code
     private async void OnJoinClicked()
     {
-        JoinButton.interactable = false;
-        LobbyStatusText.text = "Joining Lobby...";
+        uiManager.JoinButton.interactable = false;
+        uiManager.LobbyStatusText.text = "Joining Lobby...";
 
-        string lobbyCode = LobbyCodeInputField.text;
+        string lobbyCode = uiManager.LobbyCodeInputField.text;
         if (string.IsNullOrEmpty(lobbyCode))
         {
-            LobbyStatusText.text = "Please enter a Lobby Code.";
-            JoinButton.interactable = true;
+            uiManager.LobbyStatusText.text = "Please enter a Lobby Code.";
+            uiManager.JoinButton.interactable = true;
             return;
         }
 
         try
         {
-            string username = UserNameField.text;
+            string username = uiManager.UserNameField.text;
             if (string.IsNullOrEmpty(username))
             {
                 username = GenerateRandomUserName();
@@ -126,7 +132,7 @@ public class LobbyManager : MonoBehaviour
 
             currentLobby = await LobbyService.Instance.JoinLobbyByCodeAsync(lobbyCode, joinOptions);
 
-            LobbyStatusText.text = $"Joined Lobby: {currentLobby.Name}";
+            uiManager.LobbyStatusText.text = $"Joined Lobby: {currentLobby.Name}";
             Debug.Log($"Current Lobby size after joining lobby (client): {currentLobby.Players.Count}");
 
             // Retrieve Relay Join Code from Lobby Data
@@ -137,40 +143,71 @@ public class LobbyManager : MonoBehaviour
                 if (relayJoined)
                 {
                     Debug.Log($"Current Lobby size after joining relay (client): {currentLobby.Players.Count}");
-                    LobbyStatusText.text = "Joined Relay Session.";
+                    uiManager.LobbyStatusText.text = "Joined Relay Session.";
                 }
                 else
                 {
-                    LobbyStatusText.text = "Failed to Join Relay Session.";
+                    uiManager.LobbyStatusText.text = "Failed to Join Relay Session.";
                 }
             }
             else
             {
-                LobbyStatusText.text = "Lobby does not contain Relay Join Code.";
+                uiManager.LobbyStatusText.text = "Lobby does not contain Relay Join Code.";
             }
         }
         catch (LobbyServiceException e)
         {
-            LobbyStatusText.text = $"Error Joining Lobby: {e.Message}";
+            uiManager.LobbyStatusText.text = $"Error Joining Lobby: {e.Message}";
             Debug.LogError($"Lobby Join Error: {e.Message}");
         }
         finally
         {
-            JoinButton.interactable = true;
+            uiManager.JoinButton.interactable = true;
         }
     }
 
     // Start the game as the host
     private async void OnStartGameClicked()
     {
-        StartGameButton.interactable = false;
-        LobbyStatusText.text = "Starting Game...";
+        uiManager.StartGameButton.interactable = false;
+        uiManager.LobbyStatusText.text = "Starting Game...";
 
         // Assign colors to players
         await AssignPlayerColors();
 
-        // Transition to the Game Scene
-        NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
+        //if (NetworkManager.Singleton.IsHost)
+        //{
+        //    //GameObject gm = Instantiate(gameManagerPrefab);
+        //    //gm.GetComponent<NetworkObject>().Spawn();
+        //    //Debug.Log("LobbyManager: GameManager spawned.");
+        //    foreach (var obj in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
+        //    {
+        //        if (obj.TryGetComponent<GameManager>(out GameManager gm))
+        //        {
+        //            Debug.Log($"Found GameManager already spawned with hashcode: {gm.GetHashCode()}!");
+        //            if (!gm.NetworkObject.IsSpawned)
+        //            {
+        //                Debug.Log("GameManager is not spawned. Spawning...");
+        //                gm.NetworkObject.Spawn();
+                        
+        //            }
+                    
+        //        }
+        //    }
+        //}
+
+        // Transition to the Game
+        uiManager.lobbyUI.SetActive(false);
+        uiManager.gameUI.SetActive(true);
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.StartGame();
+        }
+        else
+        {
+            Debug.Log("GameManager not found in spawned objects.");
+        }
     }
 
     private Player InitializePlayer(string playerId, string username)

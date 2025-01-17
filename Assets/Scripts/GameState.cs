@@ -8,6 +8,7 @@ namespace Assets.Scripts
 {
     public enum GameState
     {
+        NotStarted,
         Idle,
         PlacingTile,
         TilePlaced,

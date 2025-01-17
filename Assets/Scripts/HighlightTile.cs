@@ -1,9 +1,10 @@
 using System;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Assets.Scripts
 {
-    public class HighlightTile : MonoBehaviour
+    public class HighlightTile : NetworkBehaviour
     {
         public event Action<Vector2Int> OnTileClicked;
 
