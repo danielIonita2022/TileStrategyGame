@@ -62,12 +62,12 @@ public class LobbyManager : MonoBehaviour
         bool relayHosted = await RelayManager.Instance.HostRelayAsync();
         if (relayHosted)
         {
-            string username = uiManager.UserNameField.text;
-            if (string.IsNullOrEmpty(username))
-            {
-                username = GenerateRandomUserName();
-            }
-            Player hostPlayer = InitializePlayer(AuthenticationService.Instance.PlayerId, username);
+            //string username = uiManager.UserNameField.text;
+            //if (string.IsNullOrEmpty(username))
+            //{
+            //    username = GenerateRandomUserName();
+            //}
+            Player hostPlayer = InitializePlayer(AuthenticationService.Instance.PlayerId, "user");
 
             string relayJoinCode = RelayManager.Instance.GetJoinCode();
 
@@ -119,13 +119,13 @@ public class LobbyManager : MonoBehaviour
 
         try
         {
-            string username = uiManager.UserNameField.text;
-            if (string.IsNullOrEmpty(username))
-            {
-                username = GenerateRandomUserName();
-            }
+            //string username = uiManager.UserNameField.text;
+            //if (string.IsNullOrEmpty(username))
+            //{
+            //    username = GenerateRandomUserName();
+            //}
 
-            Player joiningPlayer = InitializePlayer(AuthenticationService.Instance.PlayerId, username);
+            Player joiningPlayer = InitializePlayer(AuthenticationService.Instance.PlayerId, "user");
 
             JoinLobbyByCodeOptions joinOptions = new JoinLobbyByCodeOptions
             { Player = joiningPlayer};
@@ -175,27 +175,6 @@ public class LobbyManager : MonoBehaviour
         // Assign colors to players
         await AssignPlayerColors();
 
-        //if (NetworkManager.Singleton.IsHost)
-        //{
-        //    //GameObject gm = Instantiate(gameManagerPrefab);
-        //    //gm.GetComponent<NetworkObject>().Spawn();
-        //    //Debug.Log("LobbyManager: GameManager spawned.");
-        //    foreach (var obj in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
-        //    {
-        //        if (obj.TryGetComponent<GameManager>(out GameManager gm))
-        //        {
-        //            Debug.Log($"Found GameManager already spawned with hashcode: {gm.GetHashCode()}!");
-        //            if (!gm.NetworkObject.IsSpawned)
-        //            {
-        //                Debug.Log("GameManager is not spawned. Spawning...");
-        //                gm.NetworkObject.Spawn();
-                        
-        //            }
-                    
-        //        }
-        //    }
-        //}
-
         // Transition to the Game
         uiManager.lobbyUI.SetActive(false);
         uiManager.gameUI.SetActive(true);
@@ -225,7 +204,7 @@ public class LobbyManager : MonoBehaviour
     private async Task AssignPlayerColors()
     {
         List<Player> players = currentLobby.Players;
-        string[] colors = { "Red", "Blue", "Green", "Yellow" };
+        string[] colors = { "Red", "Blue", "Yellow", "Green" };
         for (int i = 0; i < players.Count; i++)
         {
             string color = colors[i % colors.Length];

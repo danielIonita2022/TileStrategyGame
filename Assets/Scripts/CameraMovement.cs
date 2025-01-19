@@ -23,10 +23,26 @@ public class CameraMovement : MonoBehaviour
 
     private Vector3 dragOrigin;
 
+    [SerializeField]
+    private float dragThreshold = 10f;
+
+    private Vector2 touchStartPosition;
+
+    private bool isDragging = false;
+
+    public bool IsDragging => isDragging;
+
     private void Update()
     {
-        PanCamera();
-        HandleZoom();
+        if (Application.isMobilePlatform)
+        {
+            HandleTouchInput();
+        }
+        else
+        {
+            PanCamera();
+            HandleZoom();
+        }
     }
 
     private void Awake()
@@ -61,6 +77,64 @@ public class CameraMovement : MonoBehaviour
         }
     }
 
+    private void HandleTouchInput()
+    {
+        if (Input.touchCount == 1) // Single touch for panning
+        {
+            Touch touch = Input.GetTouch(0);
+
+            switch (touch.phase)
+            {
+                case TouchPhase.Began:
+                    touchStartPosition = touch.position;
+                    isDragging = false; // Reset dragging flag
+                    break;
+
+                case TouchPhase.Moved:
+                    // Check if the touch has moved beyond the threshold
+                    if (!isDragging && Vector2.Distance(touch.position, touchStartPosition) > dragThreshold)
+                    {
+                        isDragging = true; // Start dragging
+                        dragOrigin = cam.ScreenToWorldPoint(touch.position);
+                    }
+
+                    if (isDragging)
+                    {
+                        Vector3 difference = dragOrigin - cam.ScreenToWorldPoint(touch.position);
+                        cam.transform.position += difference;
+                    }
+                    break;
+
+                case TouchPhase.Ended:
+                    isDragging = false;
+                    break;
+            }
+        }
+        else if (Input.touchCount == 2) // Two-finger touch for pinch-to-zoom
+        {
+            Touch touchZero = Input.GetTouch(0);
+            Touch touchOne = Input.GetTouch(1);
+
+            // Calculate the pinch distance
+            Vector2 touchZeroPrevPos = touchZero.position - touchZero.deltaPosition;
+            Vector2 touchOnePrevPos = touchOne.position - touchOne.deltaPosition;
+
+            float prevMagnitude = (touchZeroPrevPos - touchOnePrevPos).magnitude;
+            float currentMagnitude = (touchZero.position - touchOne.position).magnitude;
+
+            float difference = currentMagnitude - prevMagnitude;
+
+            // Reverse the zoom direction
+            ZoomPhone(-difference * 0.01f); // Scale the zoom speed
+        }
+    }
+
+    private void HandleTap(Vector2 screenPosition)
+    {
+        // Your logic for handling a tap on the screen
+        Debug.Log("Tap detected at: " + screenPosition);
+    }
+
     private void HandleZoom()
     {
         float scroll = Input.GetAxis("Mouse ScrollWheel");
@@ -91,16 +165,18 @@ public class CameraMovement : MonoBehaviour
     {
         float newSize = cam.orthographicSize - zoomStep;
         cam.orthographicSize = Mathf.Clamp(newSize, minCamSize, maxCamSize);
-
-        //cam.transform.position = ClampCamera(cam.transform.position);
     }
 
     public void ZoomOut()
     {
         float newSize = cam.orthographicSize + zoomStep;
         cam.orthographicSize = Mathf.Clamp(newSize, minCamSize, maxCamSize);
+    }
 
-        //cam.transform.position = ClampCamera(cam.transform.position);
+    private void ZoomPhone(float increment)
+    {
+        float newSize = cam.orthographicSize + increment;
+        cam.orthographicSize = Mathf.Clamp(newSize, minCamSize, maxCamSize);
     }
 
     private Vector3 ClampCamera(Vector3 targetPosition)

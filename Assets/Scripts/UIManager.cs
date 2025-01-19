@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using Unity.Netcode;
+using Unity.Services.Lobbies.Models;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.AdaptivePerformance.Provider;
@@ -23,13 +26,28 @@ namespace Assets.Scripts
         public Button HostButton;
         public Button JoinButton;
         public Button StartGameButton;
-        public InputField UserNameField;
 
         [Header("Game UI Components")]
         public Image previewImage;
         public Button rotateLeftButton;
         public Button rotateRightButton;
         public Button skipMeeplePlacementButton;
+
+        [Header("Background")]
+        public Canvas backgroundCanvas;
+
+        public TextMeshProUGUI FirstPlayerName;
+        public TextMeshProUGUI SecondPlayerName;
+        public TextMeshProUGUI ThirdPlayerName;
+        public TextMeshProUGUI FourthPlayerName;
+        public TextMeshProUGUI FirstPlayerScore;
+        public TextMeshProUGUI SecondPlayerScore;
+        public TextMeshProUGUI ThirdPlayerScore;
+        public TextMeshProUGUI FourthPlayerScore;
+        public TextMeshProUGUI FirstPlayerMeepleCount;
+        public TextMeshProUGUI SecondPlayerMeepleCount;
+        public TextMeshProUGUI ThirdPlayerMeepleCount;
+        public TextMeshProUGUI FourthPlayerMeepleCount;
 
         private int previewRotationState = 0; // 0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°
         private float[] rotationAngles = { 0f, 90f, 180f, 270f };
@@ -77,6 +95,148 @@ namespace Assets.Scripts
             rotateRightButton.onClick.RemoveListener(RotateRight);
             skipMeeplePlacementButton.onClick.RemoveListener(SkipMeeplePlacement);
         }
+
+        public string ConvertPlayerColorToPlayerName(PlayerColor color)
+        {
+            switch (color)
+            {
+                case PlayerColor.RED:
+                    return "RED PLAYER";
+                case PlayerColor.BLUE:
+                    return "BLUE PLAYER";
+                case PlayerColor.YELLOW:
+                    return "YELLOW PLAYER";
+                case PlayerColor.GREEN:
+                    return "GREEN PLAYER";
+                default:
+                    return "UNKNOWN PLAYER";
+            }
+        }
+
+        [ClientRpc]
+        public void UpdateHUDPlayerScoreClientRpc(int playerIndex, int newScore)
+        {
+            Debug.Log("UIManager: Entered UpdateHUDPlayerScore");
+            switch (playerIndex)
+            {
+                case 0:
+                    FirstPlayerScore.text = $"Score: {newScore}";
+                    break;
+                case 1:
+                    SecondPlayerScore.text = $"Score: {newScore}";
+                    break;
+                case 2:
+                    ThirdPlayerScore.text = $"Score: {newScore}";
+                    break;
+                case 3:
+                    FourthPlayerScore.text = $"Score: {newScore}";
+                    break;
+            };
+        }
+
+        [ClientRpc]
+        public void UpdateHUDPlayerMeepleCountClientRpc(int playerIndex, int newMeepleCount)
+        {
+            Debug.Log("UIManager: Entered UpdateHUDPlayerMeepleCount");
+            switch (playerIndex)
+            {
+                case 0:
+                    FirstPlayerMeepleCount.text = $"Meeples left: {newMeepleCount}";
+                    break;
+                case 1:
+                    SecondPlayerMeepleCount.text = $"Meeples left: {newMeepleCount}";
+                    break;
+                case 2:
+                    ThirdPlayerMeepleCount.text = $"Meeples left: {newMeepleCount}";
+                    break;
+                case 3:
+                    FourthPlayerMeepleCount.text = $"Meeples left: {newMeepleCount}";
+                    break;
+            };
+        }
+
+        public void InitGameHUD(int numberOfPlayers, PlayerColor[] playerColors, PlayerColor currentPlayerColor)
+        {
+            backgroundCanvas.gameObject.SetActive(false);
+
+            FirstPlayerName.gameObject.SetActive(false);
+            FirstPlayerScore.gameObject.SetActive(false);
+            FirstPlayerMeepleCount.gameObject.SetActive(false);
+            SecondPlayerName.gameObject.SetActive(false);
+            SecondPlayerScore.gameObject.SetActive(false);
+            SecondPlayerMeepleCount.gameObject.SetActive(false);
+            ThirdPlayerName.gameObject.SetActive(false);
+            ThirdPlayerScore.gameObject.SetActive(false);
+            ThirdPlayerMeepleCount.gameObject.SetActive(false);
+            FourthPlayerName.gameObject.SetActive(false);
+            FourthPlayerScore.gameObject.SetActive(false);
+            FourthPlayerMeepleCount.gameObject.SetActive(false);
+
+            string[] playerNames = { "RED PLAYER", "BLUE PLAYER", "YELLOW PLAYER", "GREEN PLAYER" };
+
+            for (int i = 0; i < 4; i++)
+            {
+                bool isActive = i < numberOfPlayers;
+                string playerName;
+                if (isActive)
+                {
+                    PlayerColor color = playerColors[i];
+                    if (color == currentPlayerColor)
+                    {
+                        playerName = "YOU";
+                    }
+                    else
+                    {
+                        playerName = playerNames[i];
+                    }
+                }
+                else
+                {
+                    playerName = playerNames[i];
+                }
+
+                switch (i)
+                {
+                    case 0:
+                        FirstPlayerName.text = playerName;
+                        FirstPlayerName.gameObject.SetActive(isActive);
+                        FirstPlayerScore.text = "Score: 0";
+                        FirstPlayerScore.gameObject.SetActive(isActive);
+                        FirstPlayerMeepleCount.text = "Meeples left: 6";
+                        FirstPlayerMeepleCount.gameObject.SetActive(isActive);
+                        break;
+
+                    case 1:
+                        SecondPlayerName.text = playerName;
+                        SecondPlayerName.gameObject.SetActive(isActive);
+                        SecondPlayerScore.text = "Score: 0";
+                        SecondPlayerScore.gameObject.SetActive(isActive);
+                        SecondPlayerMeepleCount.text = "Meeples left: 6";
+                        SecondPlayerMeepleCount.gameObject.SetActive(isActive);
+                        break;
+
+                    case 2:
+                        ThirdPlayerName.text = playerName;
+                        ThirdPlayerName.gameObject.SetActive(isActive);
+                        ThirdPlayerScore.text = "Score: 0";
+                        ThirdPlayerScore.gameObject.SetActive(isActive);
+                        ThirdPlayerMeepleCount.text = "Meeples left: 6";
+                        ThirdPlayerMeepleCount.gameObject.SetActive(isActive);
+                        break;
+
+                    case 3:
+                        FourthPlayerName.text = playerName;
+                        FourthPlayerName.gameObject.SetActive(isActive);
+                        FourthPlayerScore.text = "Score: 0";
+                        FourthPlayerScore.gameObject.SetActive(isActive);
+                        FourthPlayerMeepleCount.text = "Meeples left: 6";
+                        FourthPlayerMeepleCount.gameObject.SetActive(isActive);
+                        break;
+                }
+            }
+        }
+
+
 
         public static Vector3 GetOffset(int edgeIndex, float tileSize = 8f, float meepleOffset = 0.85f)
         {
@@ -202,20 +362,6 @@ namespace Assets.Scripts
             // Optionally, make the meeple options panel visible
             meepleParent.gameObject.SetActive(true);
         }
-
-        //[ServerRpc (RequireOwnership = false)]
-        //public void AddInstantiatedPlayerMeepleServerRpc(int meepleID)
-        //{
-        //    AddInstantiatedPlayerMeepleClientRpc(meepleID);
-        //}
-
-        //[ClientRpc]
-        //public void AddInstantiatedPlayerMeepleClientRpc(int meepleID)
-        //{
-        //    GameObject meepleGO = InstantiatedGrayMeeples.Find(meeple => meeple.GetComponent<Meeple>().MeepleData.MeepleID == meepleID);
-        //    Meeple meeple = meepleGO.GetComponent<Meeple>();
-        //    InstantiatedPlayerMeeples.Add(meeple);
-        //}
 
         [ServerRpc(RequireOwnership = false)]
         public void RemoveUIMeepleServerRpc(int meepleID)

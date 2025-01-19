@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
+using Unity.Services.Lobbies.Models;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -90,7 +91,6 @@ namespace Assets.Scripts
                 }
             }
 
-            // Add host player if not already included
             var hostPlayer = NetworkManager.Singleton.LocalClient.PlayerObject?.GetComponent<NetworkedPlayer>();
             if (hostPlayer != null && !players.Contains(hostPlayer))
             {
@@ -134,7 +134,6 @@ namespace Assets.Scripts
                     Debug.LogWarning($"GameManager: NetworkedPlayer component missing on Client {clientId}'s PlayerObject.");
                 }
             }
-
         }
 
         private void HandleClientDisconnected(ulong clientId)
@@ -161,12 +160,26 @@ namespace Assets.Scripts
             }
         }
 
+        private List<PlayerColor> GetPlayerColors()
+        {
+            List<PlayerColor> playerColors = new List<PlayerColor>();
+
+            foreach (var player in players)
+            {
+                playerColors.Add(player.PlayerColorEnum.Value);
+            }
+
+            return playerColors;
+        }
+
         public void StartGame()
         {
             if (gameState == GameState.NotStarted)
             {
                 gameState = GameState.Idle;
-                StartGameOnClientRpc();
+                int numberOfPlayers = players.Count;
+                PlayerColor[] playerColors = GetPlayerColors().ToArray();
+                StartGameOnClientRpc(numberOfPlayers, playerColors);
                 SetupGame();
                 Debug.Log("GameManager: Current player index: " + currentPlayerIndex);
 
@@ -184,12 +197,15 @@ namespace Assets.Scripts
         }
 
         [ClientRpc]
-        public void StartGameOnClientRpc()
+        public void StartGameOnClientRpc(int numberOfPlayers, PlayerColor[] playerColors)
         {
             Debug.Log("GameManager client: Transitioning to Game UI.");
             currentPlayerClientId.OnValueChanged += OnCurrentPlayerChanged;
             uiManager.lobbyUI.SetActive(false);
             uiManager.gameUI.SetActive(true);
+            PlayerColor currentPlayerColor = playerColors[(int)NetworkManager.Singleton.LocalClientId];
+            Debug.Log($"GameManager client: Your player color is {currentPlayerColor}");
+            uiManager.InitGameHUD(numberOfPlayers, playerColors, currentPlayerColor);
         }
 
         private IEnumerator StartTurn()
@@ -199,7 +215,7 @@ namespace Assets.Scripts
                 SetCurrentPlayerServerRpc(currentPlayerIndex);
                 TurnPlayerClientRpc();
                 DrawNextTileClientRpc();
-                boardManager.HighlightAvailablePositionsClientRpc();
+                boardManager.HighlightAvailablePositionsClientRpc(currentPlayerClientId.Value);
 
                 while (gameState != GameState.TurnCompleted)
                 {
@@ -243,19 +259,29 @@ namespace Assets.Scripts
             uiManager.HideEndTurnButton();
             uiManager.ShowPreview();
             uiManager.EnableRotation();
+            SetHighlightTilesVisibility(true);
         }
 
         private void DisablePlayerControls()
         {
             uiManager.HidePreview();
             uiManager.HideEndTurnButton();
+            SetHighlightTilesVisibility(false);
+        }
+
+        private void SetHighlightTilesVisibility(bool isActive)
+        {
+            foreach (GameObject highlightTile in boardManager.CurrentHighlightTiles.Values)
+            {
+                highlightTile.SetActive(isActive);
+            }
         }
 
         [ClientRpc]
         private void PlaceStarterClientRpc()
         {
             Vector2Int centerPos = Vector2Int.zero;
-            boardManager.PlaceTileClientRpc(centerPos, 0, true);
+            boardManager.PlaceTileClientRpc(centerPos, 0, 0, true);
         }
 
         [ClientRpc]
@@ -335,7 +361,7 @@ namespace Assets.Scripts
                 Debug.LogWarning("GameManager: Unauthorized tile placement attempt.");
                 return;
             }
-            boardManager.PlaceTileServerRpc(position, rotationState);
+            boardManager.PlaceTileServerRpc(position, rotationState, currentPlayerClientId.Value);
         }
 
         private void HandleTilePlaced(Tile placedTile)
@@ -530,6 +556,7 @@ namespace Assets.Scripts
             if (IsServer)
             {
                 ModifyPlayerMeepleCountServerRpc(1, true);
+                uiManager.UpdateHUDPlayerMeepleCountClientRpc((int)currentPlayer.OwnerClientId, currentPlayer.MeepleCount.Value);
                 CalculateCompletedFeaturesServerRpc();
             }
         }
@@ -584,6 +611,7 @@ namespace Assets.Scripts
                             int score = CalculateScore(tile, featureType, featureIndex);
                             scoringPlayer.AddScore(score);
                             Debug.Log($"GameManager: Player {scoringPlayer.PlayerColorEnum.Value} scored {score} points. TOTAL: {scoringPlayer.Score.Value}");
+                            uiManager.UpdateHUDPlayerScoreClientRpc((int)scoringPlayer.OwnerClientId, scoringPlayer.Score.Value);
                         }
                         Dictionary<TileFeatureKey, MeepleData> connectedMeeples = meepleManager.GetConnectedMeeples(tile, featureType, featureIndex);
                         foreach (var connectedMeeple in connectedMeeples)
@@ -595,6 +623,7 @@ namespace Assets.Scripts
             }
             RemovePlayerMeeples(meeplesFlaggedForRemoval);
         }
+
         private void RemovePlayerMeeples(List<MeepleData> meeplesFlaggedForRemoval)
         {
             Debug.Log("GameManager: Entered RemovePlayerMeeples");
@@ -607,6 +636,7 @@ namespace Assets.Scripts
                 player.MeepleCount.Value++;
                 meepleManager.RemoveMeepleServerRpc(meepleData.MeepleID);
                 uiManager.RemoveUIMeepleServerRpc(meepleData.MeepleID);
+                uiManager.UpdateHUDPlayerMeepleCountClientRpc((int)player.OwnerClientId, player.MeepleCount.Value);
             }
             CompleteTurnServerRpc();
         }

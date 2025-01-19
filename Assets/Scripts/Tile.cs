@@ -158,7 +158,7 @@ namespace Assets.Scripts
         /// </summary>
         private void ApplyRotation()
         {
-            transform.rotation = Quaternion.Euler(0, 0, -rotationAngles[rotationState]);
+            transform.rotation = Quaternion.Euler(0, 0, rotationAngles[rotationState]);
         }
 
         /// <summary>
@@ -171,10 +171,10 @@ namespace Assets.Scripts
             for (int i = 0; i < rotationState; i++)
             {
                 FeatureType temp = CurrentNorthEdge;
-                CurrentNorthEdge = CurrentWestEdge;
-                CurrentWestEdge = CurrentSouthEdge;
-                CurrentSouthEdge = CurrentEastEdge;
-                CurrentEastEdge = temp;
+                CurrentNorthEdge = CurrentEastEdge;
+                CurrentEastEdge = CurrentSouthEdge;
+                CurrentSouthEdge = CurrentWestEdge;
+                CurrentWestEdge = temp;
             }
 
             Debug.Log($"Tile at {GridPosition} edges after rotation: North={CurrentNorthEdge}, East={CurrentEastEdge}, South={CurrentSouthEdge}, West={CurrentWestEdge}");

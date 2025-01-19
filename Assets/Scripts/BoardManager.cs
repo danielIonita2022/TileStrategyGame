@@ -236,11 +236,11 @@ namespace Assets.Scripts
             // Apply rotationState times 90 degrees clockwise rotation
             for (int i = 0; i < rotationState; i++)
             {
-                FeatureType temp = edges[3]; // westEdge
-                edges[3] = edges[2]; // southEdge
-                edges[2] = edges[1]; // eastEdge
-                edges[1] = edges[0]; // northEdge
-                edges[0] = temp; // westEdge
+                FeatureType temp = edges[1]; // eastEdge
+                edges[1] = edges[2]; // southEdge
+                edges[2] = edges[3]; // westEdge
+                edges[3] = edges[0]; // northEdge
+                edges[0] = temp; // eastEdge
             }
 
             return new List<FeatureType>(edges);
@@ -307,16 +307,16 @@ namespace Assets.Scripts
         }
 
         [ServerRpc (RequireOwnership = false)]
-        public void PlaceTileServerRpc(Vector2Int position, int rotationState, bool isStarter = false)
+        public void PlaceTileServerRpc(Vector2Int position, int rotationState, ulong currentPlayerID, bool isStarter = false)
         {
-            PlaceTileClientRpc(position, rotationState, isStarter);
+            PlaceTileClientRpc(position, rotationState, currentPlayerID, isStarter);
         }
 
         /// <summary>
         /// Places a tile at the specified position. If isStarter is true, uses starterTileData.
         /// </summary>
         [ClientRpc]
-        public void PlaceTileClientRpc(Vector2Int position, int rotationState, bool isStarter = false)
+        public void PlaceTileClientRpc(Vector2Int position, int rotationState, ulong currentPlayerID, bool isStarter = false)
         {
             Debug.Log("BoardManager: Entered PlaceTileClientRpc");
             // Ensure the position is within bounds and not already occupied
@@ -424,7 +424,7 @@ namespace Assets.Scripts
                 // Alternatively, have a separate starter tile or assign as needed
                 Debug.Log("BoardManager: Placing starter tile.");
                 placedTiles.Add(position, newTileObj);
-                HighlightAvailablePositionsClientRpc();
+                HighlightAvailablePositionsClientRpc(currentPlayerID);
                 return;
             }
 
@@ -497,12 +497,11 @@ namespace Assets.Scripts
         /// </summary>
         /// 
         [ClientRpc]
-        public void HighlightAvailablePositionsClientRpc()
+        public void HighlightAvailablePositionsClientRpc(ulong currentPlayerID)
         {
             Debug.Log("Highlighting available positions");
 
             HashSet<Vector2Int> allAvailablePositions = new HashSet<Vector2Int>();
-
 
             foreach (Vector2Int pos in placedTiles.Keys)
             {
@@ -511,7 +510,7 @@ namespace Assets.Scripts
                 pos + Vector2Int.down * 8,
                 pos + Vector2Int.left * 8,
                 pos + Vector2Int.right * 8
-            };
+                };
 
                 foreach (Vector2Int neighbor in neighbors)
                 {
@@ -528,6 +527,10 @@ namespace Assets.Scripts
                 {
                     Debug.Log("BoardManager: Highlighting position: " + pos);
                     GameObject highlightTile = Instantiate(highlightTilePrefab, new Vector3(pos.x, pos.y, 0), Quaternion.identity);
+                    if (NetworkManager.Singleton.LocalClientId != currentPlayerID)
+                    {
+                        highlightTile.SetActive(false);
+                    }
                     CurrentHighlightTiles.Add(pos, highlightTile);
                     SpriteRenderer sr = highlightTile.GetComponent<SpriteRenderer>();
                     if (sr.sprite == null)
