@@ -54,3 +54,8 @@ Tile Strategy is a Unity-based adaptation of the classic tile-placement game Car
 
 ## Game Screenshots
 
+![Main Menu](https://github.com/danielIonita2022/TileStrategyGame/blob/main/Screenshots/main_menu.jpeg)
+
+![Gameplay 1](https://github.com/danielIonita2022/TileStrategyGame/blob/main/Screenshots/gameplay1.jpeg)
+
+![Gameplay 2](https://github.com/danielIonita2022/TileStrategyGame/blob/main/Screenshots/gameplay2.jpeg)
