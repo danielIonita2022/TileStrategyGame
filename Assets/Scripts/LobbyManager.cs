@@ -9,8 +9,9 @@ using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using System;
 using Assets.Scripts;
+using System.Linq;
 
-public class LobbyManager : MonoBehaviour
+public class LobbyManager : NetworkBehaviour
 {
     [Header("Lobby Settings")]
     public int MaxPlayers = 4;
@@ -18,8 +19,7 @@ public class LobbyManager : MonoBehaviour
 
     [SerializeField] private UIManager uiManager;
 
-    [Header("Prefabs")]
-    //public GameObject gameManagerPrefab;
+    private List<string> usernames = new List<string>();
 
     private Lobby currentLobby;
 
@@ -37,14 +37,50 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
+        if (IsServer)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+        }
+
         uiManager = UIManager.Instance;
 
         uiManager.HostButton.onClick.AddListener(OnHostClicked);
         uiManager.JoinButton.onClick.AddListener(OnJoinClicked);
         uiManager.StartGameButton.onClick.AddListener(OnStartGameClicked);
+        uiManager.LobbyList.gameObject.SetActive(false);
+        uiManager.LobbyCode.gameObject.SetActive(false);
+        uiManager.LobbyListText.gameObject.SetActive(false);
+
+        NetworkManager.Singleton.OnClientDisconnectCallback += OnPlayerDisconnected;
 
         uiManager.StartGameButton.gameObject.SetActive(false); // Visible only to host
     }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        Debug.Log("LobbyManager spawned successfully.");
+    }
+
+    public override void OnDestroy()
+    {
+        if (NetworkManager.Singleton != null)
+        {
+            if (IsServer)
+            {
+                NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+            }
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnPlayerDisconnected;
+        }
+        base.OnDestroy();
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        Debug.Log($"Client {clientId} connected. Syncing lobby list.");
+        SyncLobbyListToNewClientServerRpc(clientId); // Sync the updated lobby list to the new client
+    }
+
 
     private string GenerateRandomUserName()
     {
@@ -54,20 +90,72 @@ public class LobbyManager : MonoBehaviour
         return username;
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    private void UpdateUsernameListServerRpc(NetworkStringArray usernames)
+    {
+        foreach (string username in usernames.Array)
+        {
+            if (!this.usernames.Contains(username))
+            {
+                this.usernames.Add(username);
+            }
+        }
+        NetworkStringArray updatedUsernames = new NetworkStringArray { Array = this.usernames.ToArray() };
+        UpdateLobbyListClientRpc(updatedUsernames);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void SyncLobbyListToNewClientServerRpc(ulong newClientId)
+    {
+        NetworkStringArray updatedUsernames = new NetworkStringArray { Array = this.usernames.ToArray() };
+
+        // Send the updated list to the newly joined client
+        ClientRpcParams rpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { newClientId } // Target only the new client
+            }
+        };
+        UpdateLobbyListClientRpc(updatedUsernames, rpcParams);
+    }
+
+    [ClientRpc]
+    private void UpdateLobbyListClientRpc(NetworkStringArray usernames, ClientRpcParams clientRpcParams = default)
+    {
+        if (uiManager == null)
+        {
+            Debug.LogError("UIManager not assigned in LobbyManager.");
+            return;
+        }
+
+        uiManager.LobbyListText.text = "Current players in lobby:\n\n";
+
+        foreach (string username in usernames.Array)
+        {
+            Debug.Log("Adding username to lobby list: " + username);
+            uiManager.LobbyListText.text += username + "\n";
+        }
+    }
+
+
     public async void OnHostClicked()
     {
         uiManager.HostButton.interactable = false;
         uiManager.LobbyStatusText.text = "Hosting Lobby...";
+        uiManager.LobbyList.gameObject.SetActive(true);
+        uiManager.LobbyCode.gameObject.SetActive(true);
+        uiManager.LobbyListText.gameObject.SetActive(true);
 
         bool relayHosted = await RelayManager.Instance.HostRelayAsync();
         if (relayHosted)
         {
-            //string username = uiManager.UserNameField.text;
-            //if (string.IsNullOrEmpty(username))
-            //{
-            //    username = GenerateRandomUserName();
-            //}
-            Player hostPlayer = InitializePlayer(AuthenticationService.Instance.PlayerId, "user");
+            string username = uiManager.UserNameField.text;
+            if (string.IsNullOrEmpty(username))
+            {
+                username = GenerateRandomUserName();
+            }
+            Player hostPlayer = InitializePlayer(AuthenticationService.Instance.PlayerId, username);
 
             string relayJoinCode = RelayManager.Instance.GetJoinCode();
 
@@ -84,7 +172,8 @@ public class LobbyManager : MonoBehaviour
                 currentLobby = await LobbyService.Instance.CreateLobbyAsync(LobbyName, MaxPlayers, options);
                 Debug.Log($"Lobby created with ID: {currentLobby.Id}");
 
-                uiManager.LobbyStatusText.text = $"Lobby Hosted!\nLobby Code: {currentLobby.LobbyCode}\nRelay Join Code: {relayJoinCode}";
+                uiManager.LobbyStatusText.text = $"Lobby Hosted!";
+                uiManager.LobbyCode.text = $"Lobby Code: {currentLobby.LobbyCode}";
                 Debug.Log($"Current Lobby size (host): {currentLobby.Players.Count}");
 
                 uiManager.StartGameButton.gameObject.SetActive(true); // Host can start the game
@@ -95,6 +184,9 @@ public class LobbyManager : MonoBehaviour
                 Debug.LogError($"Lobby Creation Error: {e.Message}");
                 uiManager.HostButton.interactable = true;
             }
+
+            NetworkStringArray usernames = new NetworkStringArray { Array = new string[] { username } };
+            UpdateUsernameListServerRpc(usernames);
         }
         else
         {
@@ -108,6 +200,9 @@ public class LobbyManager : MonoBehaviour
     {
         uiManager.JoinButton.interactable = false;
         uiManager.LobbyStatusText.text = "Joining Lobby...";
+        uiManager.LobbyList.gameObject.SetActive(true);
+        uiManager.LobbyCode.gameObject.SetActive(true);
+        uiManager.LobbyListText.gameObject.SetActive(true);
 
         string lobbyCode = uiManager.LobbyCodeInputField.text;
         if (string.IsNullOrEmpty(lobbyCode))
@@ -117,15 +212,16 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
+        string username = uiManager.UserNameField.text;
+        if (string.IsNullOrEmpty(username))
+        {
+            username = GenerateRandomUserName();
+        }
+
         try
         {
-            //string username = uiManager.UserNameField.text;
-            //if (string.IsNullOrEmpty(username))
-            //{
-            //    username = GenerateRandomUserName();
-            //}
-
-            Player joiningPlayer = InitializePlayer(AuthenticationService.Instance.PlayerId, "user");
+          
+            Player joiningPlayer = InitializePlayer(AuthenticationService.Instance.PlayerId, username);
 
             JoinLobbyByCodeOptions joinOptions = new JoinLobbyByCodeOptions
             { Player = joiningPlayer};
@@ -144,6 +240,8 @@ public class LobbyManager : MonoBehaviour
                 {
                     Debug.Log($"Current Lobby size after joining relay (client): {currentLobby.Players.Count}");
                     uiManager.LobbyStatusText.text = "Joined Relay Session.";
+                    uiManager.LobbyCode.text = $"Lobby Code: {currentLobby.LobbyCode}";
+                    
                 }
                 else
                 {
@@ -154,6 +252,10 @@ public class LobbyManager : MonoBehaviour
             {
                 uiManager.LobbyStatusText.text = "Lobby does not contain Relay Join Code.";
             }
+
+            await Task.Delay(1000);
+            NetworkStringArray usernames = new NetworkStringArray { Array = new string[] { username } };
+            UpdateUsernameListServerRpc(usernames);
         }
         catch (LobbyServiceException e)
         {
@@ -163,6 +265,19 @@ public class LobbyManager : MonoBehaviour
         finally
         {
             uiManager.JoinButton.interactable = true;
+        }
+    }
+    private void OnPlayerDisconnected(ulong playerId)
+    {
+        Debug.Log($"Player with Client ID {playerId} has disconnected.");
+        Player player = currentLobby.Players.Find(p => p.Id == playerId.ToString());
+        if (player != null && player.Data.ContainsKey("Username"))
+        {
+            string username = player.Data["Username"].Value;
+            this.usernames.Remove(username);
+
+            NetworkStringArray usernames = new NetworkStringArray { Array = this.usernames.ToArray() };
+            UpdateLobbyListClientRpc(usernames);
         }
     }
 
@@ -181,7 +296,7 @@ public class LobbyManager : MonoBehaviour
 
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.StartGame();
+            GameManager.Instance.StartGame(this.usernames);
         }
         else
         {
