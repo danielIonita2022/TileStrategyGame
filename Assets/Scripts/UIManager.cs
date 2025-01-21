@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using TMPro.Examples;
 using Unity.Netcode;
 using Unity.Services.Lobbies.Models;
 using Unity.VisualScripting;
@@ -19,10 +20,16 @@ namespace Assets.Scripts
         [Header("UI Panels")]
         public GameObject lobbyUI;
         public GameObject gameUI;
+        public GameObject endGameUI;
 
         [Header("Lobby UI Components")]
         public InputField LobbyCodeInputField;
         public Text LobbyStatusText;
+        public TextMeshProUGUI LobbyCode;
+        public Image LobbyList;
+        public TextMeshProUGUI LobbyListText;
+        public TextMeshProUGUI UserNameText;
+        public TMP_InputField UserNameField;
         public Button HostButton;
         public Button JoinButton;
         public Button StartGameButton;
@@ -35,6 +42,13 @@ namespace Assets.Scripts
 
         [Header("Background")]
         public Canvas backgroundCanvas;
+
+        [Header("End Game UI Components")]
+        public TextMeshProUGUI EndGameText;
+        public TextMeshProUGUI LeaderboardTitle;
+        public Image LeaderboardImage;
+        public TextMeshProUGUI LeaderboardText;
+        public Button ReturnToLobbyButton;
 
         public TextMeshProUGUI FirstPlayerName;
         public TextMeshProUGUI SecondPlayerName;
@@ -63,6 +77,8 @@ namespace Assets.Scripts
         public Dictionary<int, Vector3> MeepleObjectsPositionsServer = new Dictionary<int, Vector3>();
         public List<Meeple> InstantiatedPlayerMeeples => instantiatedPlayerMeeples;
 
+        private string[] playerNames = new string[4];
+
         public Action OnMeepleSkipped { get; internal set; }
         public event Action OnMeeplePlaced;
 
@@ -86,6 +102,7 @@ namespace Assets.Scripts
             rotateLeftButton.onClick.AddListener(RotateLeft);
             rotateRightButton.onClick.AddListener(RotateRight);
             skipMeeplePlacementButton.onClick.AddListener(SkipMeeplePlacement);
+            ReturnToLobbyButton.onClick.AddListener(ReturnToLobby);
             HideEndTurnButton();
         }
 
@@ -96,20 +113,43 @@ namespace Assets.Scripts
             skipMeeplePlacementButton.onClick.RemoveListener(SkipMeeplePlacement);
         }
 
+        private void ReturnToLobby()
+        {
+            Debug.Log("Return to lobby button clicked.");
+            backgroundCanvas.gameObject.SetActive(true);
+            endGameUI.SetActive(false);
+            gameUI.SetActive(false);
+            lobbyUI.SetActive(true);
+        }
+
         public string ConvertPlayerColorToPlayerName(PlayerColor color)
         {
             switch (color)
             {
                 case PlayerColor.RED:
-                    return "RED PLAYER";
+                    return playerNames[0];
                 case PlayerColor.BLUE:
-                    return "BLUE PLAYER";
+                    return playerNames[1];
                 case PlayerColor.YELLOW:
-                    return "YELLOW PLAYER";
+                    return playerNames[2];
                 case PlayerColor.GREEN:
-                    return "GREEN PLAYER";
+                    return playerNames[3];
                 default:
                     return "UNKNOWN PLAYER";
+            }
+        }
+
+        public void DisplayEndGameScreen(PlayerColor[] leaderboard, int[] points)
+        {
+            backgroundCanvas.gameObject.SetActive(true);
+            endGameUI.SetActive(true);
+            gameUI.SetActive(false);
+
+            string leaderboardText = "";
+            for (int i = 0; i < leaderboard.Length; i++)
+            {
+                string playerName = ConvertPlayerColorToPlayerName(leaderboard[i]);
+                leaderboardText += $"{playerName}: {points[i]} points\n\n";
             }
         }
 
@@ -155,7 +195,7 @@ namespace Assets.Scripts
             };
         }
 
-        public void InitGameHUD(int numberOfPlayers, PlayerColor[] playerColors, PlayerColor currentPlayerColor)
+        public void InitGameHUD(int numberOfPlayers, NetworkStringArray usernamesNetworkArray)
         {
             backgroundCanvas.gameObject.SetActive(false);
 
@@ -172,66 +212,53 @@ namespace Assets.Scripts
             FourthPlayerScore.gameObject.SetActive(false);
             FourthPlayerMeepleCount.gameObject.SetActive(false);
 
-            string[] playerNames = { "RED PLAYER", "BLUE PLAYER", "YELLOW PLAYER", "GREEN PLAYER" };
+            playerNames = usernamesNetworkArray.Array;
 
             for (int i = 0; i < 4; i++)
             {
                 bool isActive = i < numberOfPlayers;
-                string playerName;
                 if (isActive)
                 {
-                    PlayerColor color = playerColors[i];
-                    if (color == currentPlayerColor)
+                    string playerName = playerNames[i].ToUpper();
+
+                    switch (i)
                     {
-                        playerName = "YOU";
+                        case 0:
+                            FirstPlayerName.text = playerName;
+                            FirstPlayerName.gameObject.SetActive(isActive);
+                            FirstPlayerScore.text = "Score: 0";
+                            FirstPlayerScore.gameObject.SetActive(isActive);
+                            FirstPlayerMeepleCount.text = "Meeples left: 6";
+                            FirstPlayerMeepleCount.gameObject.SetActive(isActive);
+                            break;
+
+                        case 1:
+                            SecondPlayerName.text = playerName;
+                            SecondPlayerName.gameObject.SetActive(isActive);
+                            SecondPlayerScore.text = "Score: 0";
+                            SecondPlayerScore.gameObject.SetActive(isActive);
+                            SecondPlayerMeepleCount.text = "Meeples left: 6";
+                            SecondPlayerMeepleCount.gameObject.SetActive(isActive);
+                            break;
+
+                        case 2:
+                            ThirdPlayerName.text = playerName;
+                            ThirdPlayerName.gameObject.SetActive(isActive);
+                            ThirdPlayerScore.text = "Score: 0";
+                            ThirdPlayerScore.gameObject.SetActive(isActive);
+                            ThirdPlayerMeepleCount.text = "Meeples left: 6";
+                            ThirdPlayerMeepleCount.gameObject.SetActive(isActive);
+                            break;
+
+                        case 3:
+                            FourthPlayerName.text = playerName;
+                            FourthPlayerName.gameObject.SetActive(isActive);
+                            FourthPlayerScore.text = "Score: 0";
+                            FourthPlayerScore.gameObject.SetActive(isActive);
+                            FourthPlayerMeepleCount.text = "Meeples left: 6";
+                            FourthPlayerMeepleCount.gameObject.SetActive(isActive);
+                            break;
                     }
-                    else
-                    {
-                        playerName = playerNames[i];
-                    }
-                }
-                else
-                {
-                    playerName = playerNames[i];
-                }
-
-                switch (i)
-                {
-                    case 0:
-                        FirstPlayerName.text = playerName;
-                        FirstPlayerName.gameObject.SetActive(isActive);
-                        FirstPlayerScore.text = "Score: 0";
-                        FirstPlayerScore.gameObject.SetActive(isActive);
-                        FirstPlayerMeepleCount.text = "Meeples left: 6";
-                        FirstPlayerMeepleCount.gameObject.SetActive(isActive);
-                        break;
-
-                    case 1:
-                        SecondPlayerName.text = playerName;
-                        SecondPlayerName.gameObject.SetActive(isActive);
-                        SecondPlayerScore.text = "Score: 0";
-                        SecondPlayerScore.gameObject.SetActive(isActive);
-                        SecondPlayerMeepleCount.text = "Meeples left: 6";
-                        SecondPlayerMeepleCount.gameObject.SetActive(isActive);
-                        break;
-
-                    case 2:
-                        ThirdPlayerName.text = playerName;
-                        ThirdPlayerName.gameObject.SetActive(isActive);
-                        ThirdPlayerScore.text = "Score: 0";
-                        ThirdPlayerScore.gameObject.SetActive(isActive);
-                        ThirdPlayerMeepleCount.text = "Meeples left: 6";
-                        ThirdPlayerMeepleCount.gameObject.SetActive(isActive);
-                        break;
-
-                    case 3:
-                        FourthPlayerName.text = playerName;
-                        FourthPlayerName.gameObject.SetActive(isActive);
-                        FourthPlayerScore.text = "Score: 0";
-                        FourthPlayerScore.gameObject.SetActive(isActive);
-                        FourthPlayerMeepleCount.text = "Meeples left: 6";
-                        FourthPlayerMeepleCount.gameObject.SetActive(isActive);
-                        break;
                 }
             }
         }
@@ -471,7 +498,7 @@ namespace Assets.Scripts
         /// <summary>
         /// Rotates the preview tile to the left (counter-clockwise).
         /// </summary>
-        private void RotateLeft()
+        private void RotateRight()
         {
             previewRotationState = (previewRotationState + 3) % 4; // Equivalent to -1 mod 4
             ApplyRotation();
@@ -480,7 +507,7 @@ namespace Assets.Scripts
         /// <summary>
         /// Rotates the preview tile to the right (clockwise).
         /// </summary>
-        private void RotateRight()
+        private void RotateLeft()
         {
             previewRotationState = (previewRotationState + 1) % 4;
             ApplyRotation();

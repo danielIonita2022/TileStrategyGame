@@ -18,13 +18,12 @@ namespace Assets.Scripts
         public LobbyManager lobbyManager;
         private MeepleManager meepleManager;
 
-        private List<NetworkedPlayer> players = new List<NetworkedPlayer>();
+        private List<NetworkedPlayer> players = new();
         private int currentPlayerIndex = 0;
         private NetworkedPlayer currentPlayer;
-        private NetworkVariable<ulong> currentPlayerClientId = new NetworkVariable<ulong>();
+        private NetworkVariable<ulong> currentPlayerClientId = new();
 
         private GameState gameState = GameState.NotStarted;
-
 
         public override void OnNetworkSpawn()
         {
@@ -37,7 +36,7 @@ namespace Assets.Scripts
                     return;
                 }
                 boardManager = BoardManager.Instance;
-                boardManager.OnNoMoreTilePlacements += EndGame;
+                boardManager.OnNoMoreTilePlacements += EndGameServerRpc;
                 boardManager.OnHighlightTileCreated += HandleHighlightTileCreated;
                 boardManager.OnPreviewImageUpdate += HandlePreviewImageUpdate;
                 boardManager.OnTilePlaced += HandleTilePlaced;
@@ -172,14 +171,15 @@ namespace Assets.Scripts
             return playerColors;
         }
 
-        public void StartGame()
+        public void StartGame(List<string> usernames)
         {
             if (gameState == GameState.NotStarted)
             {
                 gameState = GameState.Idle;
                 int numberOfPlayers = players.Count;
+                NetworkStringArray usernamesNetworkArray = new NetworkStringArray { Array = usernames.ToArray() };
                 PlayerColor[] playerColors = GetPlayerColors().ToArray();
-                StartGameOnClientRpc(numberOfPlayers, playerColors);
+                StartGameOnClientRpc(numberOfPlayers, playerColors, usernamesNetworkArray);
                 SetupGame();
                 Debug.Log("GameManager: Current player index: " + currentPlayerIndex);
 
@@ -197,7 +197,7 @@ namespace Assets.Scripts
         }
 
         [ClientRpc]
-        public void StartGameOnClientRpc(int numberOfPlayers, PlayerColor[] playerColors)
+        public void StartGameOnClientRpc(int numberOfPlayers, PlayerColor[] playerColors, NetworkStringArray usernamesNetworkArray)
         {
             Debug.Log("GameManager client: Transitioning to Game UI.");
             currentPlayerClientId.OnValueChanged += OnCurrentPlayerChanged;
@@ -205,7 +205,7 @@ namespace Assets.Scripts
             uiManager.gameUI.SetActive(true);
             PlayerColor currentPlayerColor = playerColors[(int)NetworkManager.Singleton.LocalClientId];
             Debug.Log($"GameManager client: Your player color is {currentPlayerColor}");
-            uiManager.InitGameHUD(numberOfPlayers, playerColors, currentPlayerColor);
+            uiManager.InitGameHUD(numberOfPlayers, usernamesNetworkArray);
         }
 
         private IEnumerator StartTurn()
@@ -313,18 +313,57 @@ namespace Assets.Scripts
         /// <summary>
         /// Ends the game.
         /// </summary>
-        private void EndGame()
+        [ServerRpc (RequireOwnership = false)]
+        private void EndGameServerRpc()
         {
             gameState = GameState.Finished;
-            DisableFurtherPlacement();
             Debug.Log("GameManager: Ending the game.");
-            foreach (NetworkedPlayer player in players) // Doar serverul are acces la players, gaseste solutie pentru clienti
+            List<Tuple<PlayerColor, int>> playerScoreList = new List<Tuple<PlayerColor, int>>();
+            foreach (NetworkedPlayer player in players)
             {
                 Debug.Log($"GameManager: Player {player.PlayerColorEnum.Value} scored {player.Score.Value} points.");
+                Tuple<PlayerColor, int> playerScore = new Tuple<PlayerColor, int>(player.PlayerColorEnum.Value, player.Score.Value);
+                playerScoreList.Add(playerScore);
             }
-            // Implement your end-of-game logic here
-            // Example: Display end-game UI, calculate scores, determine winner, etc.
-            // uiManager.DisplayEndGameScreen(players);
+            playerScoreList.Sort((x, y) => y.Item2.CompareTo(x.Item2));
+            List<PlayerColor> leaderboard = new List<PlayerColor>();
+            int[] playerPoints = new int[playerScoreList.Count];
+            int index = 0;
+            foreach (var playerScore in playerScoreList)
+            {
+                leaderboard.Add(playerScore.Item1);
+                playerPoints[index] = playerScore.Item2;
+                index++;
+            }
+            EndGameClientRpc(leaderboard.ToArray(), playerPoints);
+        }
+
+        [ClientRpc]
+        private void EndGameClientRpc(PlayerColor[] leaderboard, int[] points)
+        {
+            DisableFurtherPlacement();
+            uiManager.DisplayEndGameScreen(leaderboard, points);
+            EndGameSession();
+        }
+
+        public void EndGameSession()
+        {
+            Debug.Log("GameManager: Ending game session.");
+
+            gameState = GameState.NotStarted;
+
+            players.Clear();
+
+
+            if (IsServer)
+            {
+                foreach (var clientId in NetworkManager.Singleton.ConnectedClientsIds)
+                {
+                    NetworkManager.Singleton.DisconnectClient(clientId);
+                }
+            }
+
+            NetworkManager.Singleton.Shutdown();
         }
 
         /// <summary>
@@ -679,6 +718,7 @@ namespace Assets.Scripts
             {
                 uiManager.HidePreview();
                 uiManager.DisableRotation();
+                uiManager.HideEndTurnButton();
             }
         }
 
