@@ -50,3 +50,7 @@ Tile Strategy is a Unity-based adaptation of the classic tile-placement game Car
 - After placing a tile, the player can place a meeple on a feature (if valid).
 - Points are awarded for completed features.
 - The game ends when all tiles are placed or no valid moves remain.
+
+
+## Game Screenshots
+
