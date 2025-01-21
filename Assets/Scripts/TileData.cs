@@ -2,18 +2,23 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "NewTileData", menuName = "Tiles/Tile Data", order = 51)]
-public class TileData : ScriptableObject
+namespace Assets.Scripts
 {
-    [Header("Center Feature")]
-    public FeatureType centerFeature;
 
-    [Header("Edge Features")]
-    public FeatureType northEdge;
-    public FeatureType eastEdge;
-    public FeatureType southEdge;
-    public FeatureType westEdge;
+    [CreateAssetMenu(fileName = "NewTileData", menuName = "Tiles/Tile Data", order = 51)]
+    public class TileData : ScriptableObject
+    {
+        [Header("Center Feature")]
+        public FeatureType centerFeature;
 
-    // Optional: Reference to a sprite for visualization
-    public Sprite tileSprite;
+        [Header("Edge Features")]
+        public FeatureType northEdge;
+        public FeatureType eastEdge;
+        public FeatureType southEdge;
+        public FeatureType westEdge;
+
+        public Sprite tileSprite;
+
+        public int count;
+    }
 }

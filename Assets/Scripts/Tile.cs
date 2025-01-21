@@ -1,179 +1,191 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
-public class Tile : MonoBehaviour
+namespace Assets.Scripts
 {
-    [Header("Tile Data")]
-    public TileData tileData;
-
-    [Header("Tile Position")]
-    public Vector2Int gridPosition;
-
-    private int rotationState = 0;
-    private readonly float[] rotationAngles = { 0f, 90f, 180f, 270f };
-
-    private FeatureType _currentNorthEdge;
-    private FeatureType _currentEastEdge;
-    private FeatureType _currentSouthEdge;
-    private FeatureType _currentWestEdge;
-    private FeatureType _currentCenterFeature;
-
-    public FeatureType CurrentNorthEdge { get; set; }
-    public FeatureType CurrentEastEdge { get; set; }
-    public FeatureType CurrentSouthEdge { get; set; }
-    public FeatureType CurrentWestEdge { get; set; }
-    public FeatureType CurrentCenterFeature { get; set; }
-
-
-    void Awake()
+    public class Tile : NetworkBehaviour
     {
-        if (tileData != null)
-        {
-            // Store original edges
-            CurrentNorthEdge = tileData.northEdge;
-            CurrentEastEdge = tileData.eastEdge;
-            CurrentSouthEdge = tileData.southEdge;
-            CurrentWestEdge = tileData.westEdge;
-            CurrentCenterFeature = tileData.centerFeature;
+        [Header("Tile Data")]
+        public TileData tileData;
 
-            Debug.Log($"Tile at {gridPosition} original edges stored.");
-        }
-        else
-        {
-            Debug.LogWarning($"Tile at {gridPosition} has no TileData assigned.");
-        }
-    }
+        [Header("Tile Position")]
+        public Vector2Int GridPosition;
 
-    void Start()
-    {
-        if (tileData != null)
+        private int rotationState = 0;
+        private readonly float[] rotationAngles = { 0f, 90f, 180f, 270f };
+
+        public FeatureType CurrentNorthEdge { get; set; }
+        public FeatureType CurrentEastEdge { get; set; }
+        public FeatureType CurrentSouthEdge { get; set; }
+        public FeatureType CurrentWestEdge { get; set; }
+        public FeatureType CurrentCenterFeature { get; set; }
+
+        public void Awake()
         {
-            SpriteRenderer sr = GetComponent<SpriteRenderer>();
-            if (sr != null)
+            if (tileData != null)
             {
-                sr.sprite = tileData.tileSprite;
+                CurrentNorthEdge = tileData.northEdge;
+                CurrentEastEdge = tileData.eastEdge;
+                CurrentSouthEdge = tileData.southEdge;
+                CurrentWestEdge = tileData.westEdge;
+                CurrentCenterFeature = tileData.centerFeature;
+
+                Debug.Log($"Tile at {GridPosition} original edges stored.");
             }
-            //ApplyRotation();
-            HandleSpecialFeatures();
+            else
+            {
+                Debug.LogWarning($"Tile at {GridPosition} has no TileData assigned.");
+            }
         }
-    }
 
-    public void AssignFeatures()
-    {
-        if (tileData != null)
+        public override void OnNetworkSpawn()
         {
-            CurrentNorthEdge = tileData.northEdge;
-            CurrentEastEdge = tileData.eastEdge;
-            CurrentSouthEdge = tileData.southEdge;
-            CurrentWestEdge = tileData.westEdge;
-            CurrentCenterFeature = tileData.centerFeature;
+            Debug.Log($"Tile: Entered OnNetworkSpawn for tile {this.name}");
+            
         }
-    }
-    //void Start()
-    //{
-    //    if (tileData != null && tileData.tileSprite != null)
-    //    {
-    //        originalNorthEdge = tileData.northEdge;
-    //        originalEastEdge = tileData.eastEdge;
-    //        originalSouthEdge = tileData.southEdge;
-    //        originalWestEdge = tileData.westEdge;
 
-    //        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-    //        if (sr != null)
-    //        {
-    //            sr.sprite = tileData.tileSprite;
-    //        }
-
-    //        // Handle special features
-    //        HandleSpecialFeatures();
-    //    }
-    //    else
-    //    {
-    //        Debug.LogWarning($"Tile at {gridPosition} has no TileData or sprite assigned.");
-    //    }
-    //}
-
-    void HandleSpecialFeatures()
-    {
-        if (CurrentCenterFeature.HasFlag(FeatureType.SHIELD))
+        private void Start()
         {
-            // Implement logic for SHIELD, e.g., doubling points
-            Debug.Log($"Tile at {gridPosition} has a SHIELD at the center. Points doubled.");
-            // Example: Add a shield sprite overlay or modify game state
+            if (tileData != null)
+            {
+                SpriteRenderer sr = GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    sr.sprite = tileData.tileSprite;
+                }
+            }
         }
 
-        // Check edges for SHIELD if applicable
-        else if (CurrentNorthEdge.HasFlag(FeatureType.SHIELD))
+        public Vector3 GridToWorldPosition2D()
         {
-            Debug.Log($"Tile at {gridPosition} has a SHIELD on the North edge.");
-            // Implement specific logic for SHIELD on the North edge
+            return new Vector3(GridPosition[0], GridPosition[1], 0);
         }
 
-        else if (CurrentEastEdge.HasFlag(FeatureType.SHIELD))
+        public void AssignFeatures()
         {
-            Debug.Log($"Tile at {gridPosition} has a SHIELD on the East edge.");
-            // Implement specific logic for SHIELD on the East edge
+            if (tileData != null)
+            {
+                CurrentNorthEdge = tileData.northEdge;
+                CurrentEastEdge = tileData.eastEdge;
+                CurrentSouthEdge = tileData.southEdge;
+                CurrentWestEdge = tileData.westEdge;
+                CurrentCenterFeature = tileData.centerFeature;
+            }
         }
 
-        else if (CurrentSouthEdge.HasFlag(FeatureType.SHIELD))
+        /// <summary>
+        /// Retrieves the feature type for a specific edge index of a tile.
+        /// </summary>
+        public FeatureType GetFeature(int edgeIndex)
         {
-            Debug.Log($"Tile at {gridPosition} has a SHIELD on the South edge.");
-            // Implement specific logic for SHIELD on the South edge
+            switch (edgeIndex)
+            {
+                case 0:
+                    return CurrentCenterFeature;
+                case 1:
+                    return CurrentNorthEdge;
+                case 2:
+                    return CurrentEastEdge;
+                case 3:
+                    return CurrentSouthEdge;
+                case 4:
+                    return CurrentWestEdge;
+                
+                default:
+                    return FeatureType.NONE;
+            }
         }
 
-        else if (CurrentWestEdge.HasFlag(FeatureType.SHIELD))
+        public List<(FeatureType, int)> GetAllFeatures()
         {
-            Debug.Log($"Tile at {gridPosition} has a SHIELD on the West edge.");
-            // Implement specific logic for SHIELD on the West edge
+            List<(FeatureType, int)> featuresAndEdgeIndexes = new List<(FeatureType, int)>();
+
+            for (int i = 0; i < 5; i++)
+            {
+                FeatureType feature = GetFeature(i);
+                featuresAndEdgeIndexes.Add((feature, i));
+            }
+            return featuresAndEdgeIndexes;
         }
-    }
 
-    /// <summary>
-    /// Rotates the tile to the specified rotation state.
-    /// </summary>
-    /// <param name="rotationState">0-3 representing 0°, 90°, 180°, 270°</param>
-    public void RotateTile(int rotationState)
-    {
-        this.rotationState = rotationState % 4; // Ensure it's within 0-3
-        ApplyRotation();
-        RotateFeatures();
-
-        Debug.Log($"Rotated tile at {gridPosition} to {rotationState * 90} degrees.");
-    }
-
-    /// <summary>
-    /// Applies the current rotation state to the tile's transform.
-    /// </summary>
-    private void ApplyRotation()
-    {
-        transform.rotation = Quaternion.Euler(0, 0, -rotationAngles[rotationState]);
-    }
-
-    /// <summary>
-    /// Rotates the edge features based on the current rotation state.
-    /// </summary>
-    private void RotateFeatures()
-    {
-
-        // Apply rotation steps based on rotationState
-        for (int i = 0; i < rotationState; i++)
+        public FeatureType GetSpecialFeatures()
         {
-            FeatureType temp = CurrentNorthEdge;
-            CurrentNorthEdge = CurrentWestEdge;
-            CurrentWestEdge = CurrentSouthEdge;
-            CurrentSouthEdge = CurrentEastEdge;
-            CurrentEastEdge = temp;
+            if (CurrentCenterFeature.HasFlag(FeatureType.SHIELD))
+            {
+                return FeatureType.SHIELD;
+            }
+
+            else if (CurrentNorthEdge.HasFlag(FeatureType.SHIELD))
+            {
+                return FeatureType.SHIELD;
+            }
+
+            else if (CurrentEastEdge.HasFlag(FeatureType.SHIELD))
+            {
+                return FeatureType.SHIELD;
+            }
+
+            else if (CurrentSouthEdge.HasFlag(FeatureType.SHIELD))
+            {
+                return FeatureType.SHIELD;
+            }
+
+            else if (CurrentWestEdge.HasFlag(FeatureType.SHIELD))
+            {
+                return FeatureType.SHIELD;
+            }
+
+            return FeatureType.NONE;
         }
 
-        Debug.Log($"Tile at {gridPosition} edges after rotation: North={CurrentNorthEdge}, East={CurrentEastEdge}, South={CurrentSouthEdge}, West={CurrentWestEdge}");
-    }
+        /// <summary>
+        /// Rotates the tile to the specified rotation state.
+        /// </summary>
+        /// <param name="rotationState">0-3 representing 0°, 90°, 180°, 270°</param>
+        public void RotateTile(int rotationState)
+        {
+            this.rotationState = rotationState % 4; // Ensure it's within 0-3
+            ApplyRotation();
+            RotateFeatures();
 
-    /// <summary>
-    /// Retrieves the current rotation state.
-    /// </summary>
-    public int GetRotationState()
-    {
-        return rotationState;
+            Debug.Log($"Rotated tile at {GridPosition} to {rotationState * 90} degrees.");
+        }
+
+        /// <summary>
+        /// Applies the current rotation state to the tile's transform.
+        /// </summary>
+        private void ApplyRotation()
+        {
+            transform.rotation = Quaternion.Euler(0, 0, rotationAngles[rotationState]);
+        }
+
+        /// <summary>
+        /// Rotates the edge features based on the current rotation state.
+        /// </summary>
+        private void RotateFeatures()
+        {
+
+            // Apply rotation steps based on rotationState
+            for (int i = 0; i < rotationState; i++)
+            {
+                FeatureType temp = CurrentNorthEdge;
+                CurrentNorthEdge = CurrentEastEdge;
+                CurrentEastEdge = CurrentSouthEdge;
+                CurrentSouthEdge = CurrentWestEdge;
+                CurrentWestEdge = temp;
+            }
+
+            Debug.Log($"Tile at {GridPosition} edges after rotation: North={CurrentNorthEdge}, East={CurrentEastEdge}, South={CurrentSouthEdge}, West={CurrentWestEdge}");
+        }
+
+        /// <summary>
+        /// Retrieves the current rotation state.
+        /// </summary>
+        public int GetRotationState()
+        {
+            return rotationState;
+        }
     }
 }

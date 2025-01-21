@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1389863220443834554}
   - component: {fileID: 5213442778941968756}
   - component: {fileID: 212904573140033992}
+  - component: {fileID: 6601761136938446544}
   - component: {fileID: -7651857041886323682}
   m_Layer: 0
   m_Name: HighlightTilePrefab
@@ -28,7 +29,7 @@ Transform:
   m_GameObject: {fileID: 4150271876275087771}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 448.96, y: 189.43, z: -1.9796168}
+  m_LocalPosition: {x: 449.08, y: 189.39, z: -1.9796168}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -72,10 +73,10 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: 1024232501
+  m_SortingLayer: 1
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 43a8c5e2b5b16334e9f19f4700fc8092, type: 3}
+  m_Sprite: {fileID: 21300000, guid: d378caad49ae80743ac5c2ddeb361c86, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -131,6 +132,27 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 8, y: 8}
   m_EdgeRadius: 0
+--- !u!114 &6601761136938446544
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4150271876275087771}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 1261842037
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
 --- !u!114 &-7651857041886323682
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -143,4 +165,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d3b27498eb31904b9be00740c299186, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boardManager: {fileID: 0}
+  TilePosition: {x: 0, y: 0}
